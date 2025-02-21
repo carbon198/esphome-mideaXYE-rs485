@@ -20,10 +20,15 @@ Select HVAC Mode - these are standard HVAC modes, compatible with a climate devi
 Input Number Set temperature - this is the current target temperature and input for target temperature
 
 Sensor Inlet Air Temperature - T1, air measured coming into the air handler. If you have "follow me" turned on this sensor will eventually get stale.\
+
 Sensor Coil A Temp - Refrigerant temperature\
+
 Sensor Coil B Temp - Refrigerant temperature\
+
 Sensor Outdoor Temp\
+
 Sensor Error Codes - 2 bytes of error codes. I haven't had an error code to test these but they will be the integer form of the 2 hex codes. The reverese engineered XYE notes aren't very clear on these.\
+
 Sensor Full data string - Integer list of all the data received most recently from the Midea unit. Can match these up to the XYE reverse engineered values to check what data is coming in. Sorry it's not in hex, my C++ isn't strong enough haha.
 
 # Background

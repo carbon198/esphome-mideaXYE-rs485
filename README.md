@@ -29,9 +29,9 @@ Note: The ESPhome thermostat entity kind of sucks. Because the heat pump can hea
 
 # Home Assistant
 The device that is created will have the following entities:
-Select Fan Mode - these are standard Home Assistant fan modes, compatible with a climate device
-Select HVAC Mode - these are standard HVAC modes, compatible with a climate device
-Input Number Set temperature - this is the current target temperature and input for target temperature
+- Select Fan Mode - these are standard Home Assistant fan modes, compatible with a climate device
+- Select HVAC Mode - these are standard HVAC modes, compatible with a climate device
+- Input Number Set temperature - this is the current target temperature and input for target temperature
 
 - Sensor Inlet Air Temperature - T1, air measured coming into the air handler. If you have "follow me" turned on this sensor will eventually get stale.
 - Sensor Coil A Temp - Refrigerant temperature, this value will get hot/cold when actively heating or cooling

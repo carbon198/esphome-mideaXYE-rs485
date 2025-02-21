@@ -33,12 +33,12 @@ Select Fan Mode - these are standard Home Assistant fan modes, compatible with a
 Select HVAC Mode - these are standard HVAC modes, compatible with a climate device
 Input Number Set temperature - this is the current target temperature and input for target temperature
 
--Sensor Inlet Air Temperature - T1, air measured coming into the air handler. If you have "follow me" turned on this sensor will eventually get stale.
--Sensor Coil A Temp - Refrigerant temperature, this value will get hot/cold when actively heating or cooling
--Sensor Coil B Temp - Refrigerant temperature (this value is stuck for me, not useful)
--Sensor Outdoor Temp
--Sensor Error Codes - 2 bytes of error codes. I haven't had an error code to test these but they will be the integer form of the 2 hex codes. The reverese engineered XYE notes aren't very clear on these.
--Sensor Full data string - Integer list of all the data received most recently from the Midea unit. Can match these up to the XYE reverse engineered values to check what data is coming in. Sorry it's not in hex, my C++ isn't strong enough haha.
+- Sensor Inlet Air Temperature - T1, air measured coming into the air handler. If you have "follow me" turned on this sensor will eventually get stale.
+- Sensor Coil A Temp - Refrigerant temperature, this value will get hot/cold when actively heating or cooling
+- Sensor Coil B Temp - Refrigerant temperature (this value is stuck for me, not useful)
+- Sensor Outdoor Temp
+- Sensor Error Codes - 2 bytes of error codes. I haven't had an error code to test these but they will be the integer form of the 2 hex codes. The reverese engineered XYE notes aren't very clear on these.
+- Sensor Full data string - Integer list of all the data received most recently from the Midea unit. Can match these up to the XYE reverse engineered values to check what data is coming in. Sorry it's not in hex, my C++ isn't strong enough haha.
 
 # Background
 I have a Carrier heatpump (38MARB) and ducted air handler (40MBAB), and the heat pump is a rebranded Midea unit.  The included controls are fine, but I wanted to add wireless control and integrate with Home Assistant without using a 24V thermostat.  I can't find anything definitive but I suspect using a 24V thermostat would prevent any benefits from the variable frequency drive of the heat pump (the unit won't know the setpoint so it won't know how to modulate).  

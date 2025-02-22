@@ -29,11 +29,11 @@ This was intended for use with Home Assistant, the YAML file is for ESPHome.
 includes:
   - xyeVars.h
 ```
-4. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
-5. Set `IS_8266` to 1 if you're using an 8266-based board.
-6. If ESP32: Edit the #define section of the xyeVars.h file to match your GPIO pins for RX and TX (if necessary).  This won't do anything on ESP8266 as the code swaps the serial to GPIO 13/15.
-7. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity
-8. When I changed my wired controller to Fahrenheit it seems that internally the air handler / heat pump is using all degrees Fahrenheit now.  If you're using Celsius then comment out the Fahrenheit lines and uncomment Celsius lines in the yaml file. As long as you have your default units set correctly in Home Assistant AND your "wired controller" for your unit is reading out in Celsius then everything should be fine, no conversions or math necessary.
+5. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
+6. Set `IS_8266` to 1 if you're using an 8266-based board.
+7. If ESP32: Edit the #define section of the xyeVars.h file to match your GPIO pins for RX and TX (if necessary).  This won't do anything on ESP8266 as the code swaps the serial to GPIO 13/15.
+8. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity
+9. When I changed my wired controller to Fahrenheit it seems that internally the air handler / heat pump is using all degrees Fahrenheit now.  If you're using Celsius then comment out the Fahrenheit lines and uncomment Celsius lines in the yaml file. As long as you have your default units set correctly in Home Assistant AND your "wired controller" for your unit is reading out in Celsius then everything should be fine, no conversions or math necessary.
 
 Note: The ESPhome thermostat entity kind of sucks. Because the heat pump can heat and cool, the displayed thermostat shows up as a dual-setpoint thermostat which isn't really accurate.  I recommend creating your own template thermostat with the custom entity from https://github.com/jcwillox/hass-template-climate/tree/main.
 

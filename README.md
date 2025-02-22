@@ -25,7 +25,7 @@ includes:
 6. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity
 7. When I changed my wired controller to Fahrenheit it seems that internally the air handler / heat pump is using all degrees Fahrenheit now.  If you're using Celsius then comment out the Fahrenheit lines and uncomment Celsius lines in the yaml file. As long as you have your default units set correctly in Home Assistant AND your "wired controller" for your unit is reading out in Celsius then everything should be fine, no conversions or math necessary.
     
-# ESP8266-based device setup
+# ESP8266-based device setup --- UNTESTED
 ## Hardware
 1. ESP8266 device
 2. RS-485 transceiver with **automatic flow control** (if not you will need to edit my code to switch flow control manually after serial read/write)

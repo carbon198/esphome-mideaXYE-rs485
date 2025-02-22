@@ -1,0 +1,423 @@
+# need to add these lines to your "esphome" section
+#  includes:
+#    - xyeVars.h
+
+
+climate:
+  - platform: thermostat
+    name: "Midea Thermostat"
+    id: tstat
+    sensor: t1
+
+    # change this to false if you want to use the climate entity
+    internal: True
+
+    visual:
+      temperature_step:
+        target_temperature: 1
+        current_temperature: 1
+
+    # this block is placeholder since we aren't actually controlling when the AC runs
+    min_cooling_off_time: 1s
+    min_cooling_run_time: 1s
+    min_heating_off_time: 1s
+    min_heating_run_time: 1s
+    min_fanning_off_time: 1s
+    min_fanning_run_time: 1s
+    min_fan_mode_switching_time: 1s
+    min_idle_time: 1s
+    cool_action:
+      - delay: 1ms
+    heat_action:
+      - delay: 1ms
+    idle_action:
+      - delay: 1ms
+    dry_action:
+      - delay: 1ms
+    fan_only_action:
+      - delay: 1ms
+
+    # set target temperature on change
+    target_temperature_change_action: 
+      - number.set: 
+          id: setPoint
+          value: !lambda "return id(tstat).target_temperature;"
+
+    # mode changes for operation and fan settings
+    cool_mode:
+      - select.set: 
+          id: opMode
+          option: "cool"
+    heat_mode:
+      - select.set: 
+          id: opMode
+          option: "heat"
+    off_mode:
+      - select.set: 
+          id: opMode
+          option: "off"
+    dry_mode:
+      - select.set:
+          id: opMode
+          option: "dry"
+    fan_only_mode:
+      - select.set:
+          id: opMode
+          option: "fan_only"
+    auto_mode:
+      - select.set:
+          id: opMode
+          option: "auto"
+    fan_mode_auto_action:
+      - select.set: 
+          id: fanMode
+          option: "auto"
+    fan_mode_low_action:
+      - select.set: 
+          id: fanMode
+          option: "low"
+    fan_mode_medium_action:
+      - select.set: 
+          id: fanMode
+          option: "medium"
+    fan_mode_high_action:
+      - select.set: 
+          id: fanMode
+          option: "high"
+
+
+
+
+button:
+  - platform: template
+    name: "send command"
+    internal: true
+    id: ubutton
+    on_press:
+      - lambda: |-
+          uint8_t resp;
+          if (Serial){
+            Serial.begin(4800, SERIAL_8N1);
+            Serial.swap();
+            ESP_LOGI("custom","started serial connection in update button code");
+          }
+          xyeVars.sendData[SEND_MODE] = xyeVars.opBytes;
+          xyeVars.sendData[SEND_FAN] = xyeVars.fanBytes;
+          xyeVars.sendData[SEND_TEMP] = xyeVars.setTemp;
+          ESP_LOGI("custom","Getting ready to send: op %02X fan %02X temp %02X",xyeVars.opBytes,xyeVars.fanBytes,xyeVars.setTemp);
+          uint8_t i=0;
+          uint32_t crc=0;
+          int len=16;
+          for(i=0;i<len;i++)
+          { 
+            if(i!=SEND_CRC)
+            {
+              crc+=xyeVars.sendData[i];
+            }
+          }
+          ESP_LOGI("custom","sum of values for CRC calc is %i",crc);
+          xyeVars.sendData[SEND_CRC] = 0xFF - (crc&0xFF);
+          ESP_LOGI("custom","calculated CRC is %x",crc);
+          resp = Serial.available();
+          if (resp==0) {
+            Serial.write(xyeVars.sendData, SEND_LEN);
+            for (i=0;i<SEND_LEN;i++)
+            {
+              ESP_LOGI("custom","%x",xyeVars.sendData[i]);
+            }
+            ESP_LOGI("custom","sent command");
+            xyeVars.waitingForResponse = 1;
+          } else {
+            ESP_LOGI("custom","had to wait to send, response was available");
+            std::memcpy(xyeVars.waitSendData, xyeVars.sendData, 16);
+            xyeVars.waitingToSend = 1;
+          }
+
+number:
+  - platform: template
+    name: "Set Point"
+    id: setPoint
+    step: 1
+    mode: box
+    min_value: 0
+    max_value: 100
+    unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
+    device_class: temperature
+    update_interval: 1s
+    lambda: |-
+      return xyeVars.setTemp;
+    set_action:
+      lambda: |-
+        xyeVars.setTemp = x;
+        //static_cast<uint8_t>(id(setPoint).state);
+        id(ubutton).press();
+
+sensor:
+  - platform: template
+    name: "receiver"
+    id: receiver
+    internal: true
+    update_interval: 1s
+    lambda: |-
+      uint8_t i,resp;
+      xyeVars.goodData = 0;
+      //ESP_LOGI("custom","checking for incoming serial data");
+      if (!Serial)
+      {
+        Serial.begin(4800, SERIAL_8N1);
+        Serial.swap();
+        ESP_LOGI("custom","started serial connection in receiver sensor code");
+      } else 
+      {
+        resp = Serial.available();
+        if (resp>0)
+        {
+          ESP_LOGI("custom","there are %i bytes of data waiting",resp);
+          if (resp == 32)
+          {
+            ESP_LOGI("custom","32 bytes of data found, reading data...");
+            for (i=0; i<resp; i++)
+            {
+              if (i<30)
+              {
+                xyeVars.recData[i] = Serial.read();
+              } else
+              {
+                Serial.read();
+              }
+            }
+            ESP_LOGI("custom","done reading, examining data");
+            xyeVars.goodData = 1;
+            xyeVars.waitingForResponse = 0;
+            xyeVars.prevResp = 0;
+          } else if (xyeVars.prevResp == resp) 
+          {
+            // it's been 2 update cycles with no change in length of data, this is leftover data. dump it.
+            for (i=0;i<resp;i++)
+            {
+              Serial.read();
+            }
+            ESP_LOGI("custom","dumped some data: %i",resp);
+            xyeVars.waitingForResponse = 0;
+            xyeVars.prevResp = 0;
+          } else 
+          {
+                // might have caught in middle of stream
+                ESP_LOGI("custom","got small response, wait for more. size was %i", resp);
+                xyeVars.prevResp = resp;
+          }
+        }
+      }
+      if (xyeVars.goodData == 1) {
+        if (xyeVars.waitingToSend == 1) 
+        {
+          ESP_LOGI("custom","finished reading, had data waiting to write. now writing...");
+          Serial.write(xyeVars.waitSendData,16);
+          xyeVars.waitingForResponse = 1;
+          xyeVars.waitingToSend = 0;
+        } else 
+        {
+          xyeVars.fanBytes = xyeVars.recData[REC_FAN];
+          xyeVars.opBytes = xyeVars.recData[REC_MODE];
+          xyeVars.setTemp = xyeVars.recData[REC_TEMP];
+          ESP_LOGI("custom","Got these updated values: op %02X fan %02X temp %02X",xyeVars.opBytes,xyeVars.fanBytes,xyeVars.setTemp);
+        }
+      }
+      return 0;
+
+  - platform: template
+    name: "querier"
+    id: querier
+    internal: true
+    update_interval: 15s
+    lambda: |-
+      uint8_t resp=Serial.available();
+      ESP_LOGI("custom","going to send a query package...");
+      if (!((xyeVars.waitingToSend == 1) || (resp != 0)))
+      {
+        if (!Serial)
+        {
+          Serial.begin(4800, SERIAL_8N1);
+          Serial.swap();
+          ESP_LOGI("custom","started serial connection in 15s query sensor code");
+        }
+        Serial.write(xyeVars.queryData,16);
+        ESP_LOGI("custom","sent query package, waiting for response...");
+        xyeVars.waitingForResponse = 1;
+      } else 
+      {
+        ESP_LOGI("custom","waiting to send/receive prevented sending query package");
+      }
+      return 0;
+
+  - platform: template
+    name: "Inlet Air Temperature"
+    unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
+    id: t1
+    update_interval: 1s
+    device_class: temperature
+    lambda: |-
+      return xyeVars.recData[T1_INDEX];
+
+  - platform: template
+    name: "Coil A Temperature"
+    unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
+    update_interval: 1s
+    device_class: temperature
+    lambda: |-
+      return xyeVars.recData[T2A_INDEX];
+
+  - platform: template
+    name: "Coil B Temperature"
+    unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
+    update_interval: 1s
+    device_class: temperature
+    lambda: |-
+      return xyeVars.recData[T2B_INDEX];
+
+  - platform: template
+    name: "Outside Air Temperature"
+    unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
+    update_interval: 1s
+    device_class: temperature
+    lambda: |-
+      return xyeVars.recData[T3_INDEX];
+
+text_sensor:
+  - platform: template
+    name: "Error Codes"
+    update_interval: 1s
+    lambda: |-
+      
+      return {"E1: " + std::to_string(xyeVars.recData[23]) + " E2: " + std::to_string(xyeVars.recData[23])};
+
+  - platform: template
+    name: "Full data string"
+    update_interval: 15s
+    lambda: |-
+      std::string outString;
+      uint8_t i;
+      for (i=0;i<(sizeof(xyeVars.recData) / sizeof(xyeVars.recData[0]));i++)
+      {
+        outString = outString + std::to_string(xyeVars.recData[i]) + " ";
+      }
+      return {outString};
+      
+
+select:
+  - platform: template
+    name: "Fan Mode"
+    id: fanMode
+    update_interval: 1s
+    options:
+      - 'low'
+      - 'medium'
+      - 'high'
+      - 'auto'
+      # need to add switch case for updating the value based off xyeVars.fanBytes
+    lambda: |-
+      switch (xyeVars.fanBytes)
+      {
+        case 0x80:
+          xyeVars.fan = "auto";
+          break;
+        case 0x01:
+          xyeVars.fan = "high";
+          break;
+        case 0x02:
+          xyeVars.fan = "medium";
+          break;
+        case 0x03:
+          xyeVars.fan = "low";
+          break;
+        default:
+          xyeVars.fan = "auto";
+      }
+      return xyeVars.fan;
+    set_action: 
+      - lambda: |-
+          xyeVars.fan = x;
+          ESP_LOGI("custom","change fan to: %s",x);
+          if (xyeVars.fan == "high"){
+            xyeVars.fanBytes = 0x01;
+          } else if (xyeVars.fan == "auto"){
+            xyeVars.fanBytes = 0x80;
+          } else if (xyeVars.fan == "medium"){
+            xyeVars.fanBytes = 0x02;
+          } else if (xyeVars.fan == "low"){
+            xyeVars.fanBytes = 0x03;
+          } else {
+            xyeVars.fanBytes = 0xFF;
+          }
+          ESP_LOGI("custom","selected %x, pressing button to send",xyeVars.fanBytes);
+          if (!(xyeVars.fanBytes==0xFF)){
+            id(ubutton).press();
+          }
+
+  - platform: template
+    id: opMode
+    name: "Operating Mode"
+    update_interval: 1s
+    options:
+      - 'off'
+      - 'auto'
+      - 'cool'
+      - 'dry'
+      - 'heat'
+      - 'fan_only'
+    set_action:
+      - lambda: |-
+          if (xyeVars.op != x)
+          {
+            xyeVars.op = x;
+            if (xyeVars.op == "off"){
+              xyeVars.opBytes = 0x00;
+            } else if (xyeVars.op == "auto"){
+              xyeVars.opBytes = 0x80;
+            } else if (xyeVars.op == "cool"){
+              xyeVars.opBytes = 0x88;
+            } else if (xyeVars.op == "dry"){
+              xyeVars.opBytes = 0x82;
+            } else if (xyeVars.op == "heat"){
+              xyeVars.opBytes = 0x84;
+            } else if (xyeVars.op == "fan_only"){
+              xyeVars.opBytes = 0x81;
+            } else {
+              xyeVars.opBytes = 0xFF;
+            }
+            ESP_LOGI("custom","selected %x for mode, pressing button to send",xyeVars.opBytes);
+            if (!(xyeVars.opBytes==0xFF)){
+              id(ubutton).press();
+            }
+          }
+      # need to add switch case for updating the value based off xyeVars.opBytes
+    lambda: |-
+      switch (xyeVars.opBytes)
+      {
+        case 0x00:
+          xyeVars.op = "off";
+          break;
+        case 0x80:
+          xyeVars.op = "auto";
+          break;
+        case 0x88:
+          xyeVars.op = "cool";
+          break;
+        case 0x82:
+          xyeVars.op = "dry";
+          break;
+        case 0x84:
+          xyeVars.op = "heat";
+          break;
+        case 0x81:
+          xyeVars.op = "fan_only";
+          break;
+        default:
+          xyeVars.op = "off";
+      }
+      return xyeVars.op;

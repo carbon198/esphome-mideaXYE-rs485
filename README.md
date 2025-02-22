@@ -4,19 +4,27 @@ ESPhome files to communicate with Midea AC units via RS485 XYE (CCM) terminals.
 This project will allow you to wirelessly communicate with your Midea AC unit via the XYE terminals.  These terminals are normally used for communication with a Central Controller Module (CCM) but the data has been reverse engineered (https://codeberg.org/xye/xye).  I initially used the code from bunicutz project https://github.com/Bunicutz/ESP32_Midea_RS485/tree/main, but as of ESPHome 2025.2.0 custom components are no longer supported and that code does not work.  This project doesn't use custom components, just several lambda functions and a header file.  I'm not a C++ developer, so forgive me if the code isn't very elegant. It gets the job done though!
 
 # Hardware
-1. ESPHome device
+## ESP32 device setup
+1. ESP32 device
 2. RS-485 transceiver with **automatic flow control** (if not you will need to edit my code to switch flow control manually after serial read/write)
-3. Midea-like heat pump or air handler with **XYE terminals**.
-  
-1. Connect ESP Vin, GND, GPIO16 to RX, and GPIO17 to TX on the UART side of the transceiver (can edit these in the header file if necessary).
-2. On the RS-485 transceiver connect A to X, B to Y, and GND to E (optional).
+3. Midea-like heat pump or air handler with **XYE terminals**. 
+4. Connect ESP Vin, GND, GPIO16 to RX, and GPIO17 to TX on the UART side of the transceiver (can edit these in the header file if necessary).
+5. On the RS-485 transceiver connect A to X, B to Y, and GND to E (optional).
+
+## ESP8266 device setup
+1. ESP8266 device
+2. RS-485 transceiver with **automatic flow control** (if not you will need to edit my code to switch flow control manually after serial read/write)
+3. Midea-like heat pump or air handler with **XYE terminals**. 
+4. Connect ESP Vin, GND, GPIO13 to RX, and GPIO15 to TX on the UART side of the transceiver (can edit these in the header file if necessary).
+5. On the RS-485 transceiver connect A to X, B to Y, and GND to E (optional).
 
 # Software
 This was intended for use with Home Assistant, the YAML file is for ESPHome. 
 
 1. Create a new ESPHome device and configure it with your wifi info
-2. Paste the contents of "midea-xye.yaml" under the auto-populated info in your new ESPHome device.
-3. Under the esphome yaml header in your file add:
+2. If using ESP32: Paste the contents of "esp32-mideaXYE.yaml" under the auto-populated info in your new ESPHome device.
+3. If using ESP8266: Paste the contents of "esp8266-mideaXYE.yaml" under the auto-populated info in your new ESPHome device
+4. Under the esphome yaml header in your file add:
 ```
 includes:
   - xyeVars.h

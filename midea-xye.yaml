@@ -100,7 +100,6 @@ button:
             mySerial.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
             ESP_LOGI("custom","started serial connection in update button code");
           }
-          //std::vector<uint8_t> cmd = {0xaa, 0xc3, 0x00, 0x00, 0x80, 0x00, xyeVars.opBytes, xyeVars.fanBytes, xyeVars.setTemp, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x55};
           xyeVars.sendData[SEND_MODE] = xyeVars.opBytes;
           xyeVars.sendData[SEND_FAN] = xyeVars.fanBytes;
           xyeVars.sendData[SEND_TEMP] = xyeVars.setTemp;
@@ -142,6 +141,7 @@ number:
     min_value: 0
     max_value: 100
     unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
     device_class: temperature
     update_interval: 1s
     lambda: |-
@@ -251,35 +251,39 @@ sensor:
   - platform: template
     name: "Inlet Air Temperature"
     unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
     id: t1
     update_interval: 1s
     device_class: temperature
     lambda: |-
-      return xyeVars.recData[T1];
+      return xyeVars.recData[T1_INDEX];
 
   - platform: template
     name: "Coil A Temperature"
     unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
     update_interval: 1s
     device_class: temperature
     lambda: |-
-      return xyeVars.recData[T2A];
+      return xyeVars.recData[T2A_INDEX];
 
   - platform: template
     name: "Coil B Temperature"
     unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
     update_interval: 1s
     device_class: temperature
     lambda: |-
-      return xyeVars.recData[T2B];
+      return xyeVars.recData[T2B_INDEX];
 
   - platform: template
     name: "Outside Air Temperature"
     unit_of_measurement: "°F"
+    #unit_of_measurement: "°C"
     update_interval: 1s
     device_class: temperature
     lambda: |-
-      return xyeVars.recData[T3];
+      return xyeVars.recData[T3_INDEX];
 
 text_sensor:
   - platform: template

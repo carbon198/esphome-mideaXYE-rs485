@@ -4,7 +4,7 @@
 #define RX_PIN 16
 #define TX_PIN 17
 
-#define CMD 1
+#define CMD_VAL 1
 #define SEND_MODE 6
 #define SEND_FAN 7
 #define SEND_TEMP 8
@@ -14,10 +14,10 @@
 #define REC_MODE 8
 #define REC_FAN 9
 #define REC_TEMP 10
-#define T1 11
-#define T2A 12
-#define T2B 13
-#define T3 14
+#define T1_INDEX 11
+#define T2A_INDEX 12
+#define T2B_INDEX 13
+#define T3_INDEX 14
 
 using namespace esphome;
 HardwareSerial mySerial(2);

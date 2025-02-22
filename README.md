@@ -37,6 +37,12 @@ includes:
 
 Note: The ESPhome thermostat entity kind of sucks. Because the heat pump can heat and cool, the displayed thermostat shows up as a dual-setpoint thermostat which isn't really accurate.  I recommend creating your own template thermostat with the custom entity from https://github.com/jcwillox/hass-template-climate/tree/main.
 
+# How it works
+The code sends a `query` set every 15s.  It checks `mySerial.available()` every 1s and reads data (there will only be data there after sending a query or a command).  The "receiver" sensor is running the 1s read check and updating internal variables with the read values.  Each of the actual sensors (temperatures, setpoints, modes, etc) are checking the internal values every 1s.  If any of the input elements are changed from home assistant, they fire an lambda function that forms a `command` set and writes it to the serial bus.  The response to a command to change something is always the old state (not sure why) so I dumped the first response after sending a command. 
+
+# Debugging
+Change your log level to DEBUG in the esphome yaml file if you want to see more info.  If you set it to "info" then you'll just get the little debug lines I wrote that will tell you what the program is currently doing (or **thinks** it's doing!).  You can add more `ESP_LOGI("custom","log this to the terminal!")` lines anywhere you want to get more feedback of what's going on.
+
 # Home Assistant
 The device that is created will have the following entities:
 - Select Fan Mode - these are standard Home Assistant fan modes, compatible with a climate device

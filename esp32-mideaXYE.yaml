@@ -2,7 +2,11 @@
 #  includes:
 #    - xyeVars.h
 
+# uncomment to enable the web server for easier debugging. You can access the interface
+# at the IP address of your esp device after it connects to the network.
+#web_server:
 
+# script to start the serial connection
 script:
   - id: check_serial
     then:
@@ -12,6 +16,7 @@ script:
             Serial2.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
           } 
           
+# this script sends data that was blocked by incoming data
   - id: wait_send
     then:
     - lambda: |-
@@ -20,9 +25,8 @@ script:
         xyeVars.waitingToSend = 0;
         xyeVars.commandSent = 1;
 
-
-  
-
+# this will construct the command to send to the air handler, called by the input sensors
+# when required.  It tries to not send if we're in the middle of receiving.
   - id: send_command
     then:
     - script.execute: check_serial
@@ -166,6 +170,11 @@ number:
             xyeVars.setTemp = x;
         - script.execute: send_command
 
+# This sensor updates once a second and just checks the Serial() buffer for anything to read
+# A response is always 32 bytes of data, but only the first 30 are useful.
+# If we happen to check the buffer midstream then this will skip that cycle and finish reading it on the next cycle.
+# if nothing more comes in then it dumps the data
+# Last, it checks if there was data waiting to be sent and sends that data after reading.
 sensor:
   - platform: template
     name: "receiver"
@@ -239,6 +248,8 @@ sensor:
       }
       return 0;
 
+# this sensor updates every 15 seconds. when it updates, it sends a query package to the
+# air handler. The query package is the always the same, xyeVars.queryData.
   - platform: template
     name: "querier"
     id: querier
@@ -269,6 +280,10 @@ sensor:
     lambda: |-
       return xyeVars.recData[T1_INDEX];
 
+
+# this is the temperature of the refrigerant coming into the air handler from the compressor
+# when it gets hot your compressor is heating, when it gets cold you are cooling.
+# otherwise it should drift close to ambient or T1
   - platform: template
     name: "Coil A Temperature"
     unit_of_measurement: "°F"
@@ -287,6 +302,8 @@ sensor:
     lambda: |-
       return xyeVars.recData[T2B_INDEX];
 
+# I don't think this is truly outside temperature. I think it's exhaust air temperature
+# from the compressor outside which is ambient when it's not running.
   - platform: template
     name: "Outside Air Temperature"
     unit_of_measurement: "°F"
@@ -296,6 +313,9 @@ sensor:
     lambda: |-
       return xyeVars.recData[T3_INDEX];
 
+# the 2 error code registers combined in one message. it's just the code number,
+# you will need the service manual to decode them probably. I haven't tested any error
+# codes yet. 
 text_sensor:
   - platform: template
     name: "Error Codes"
@@ -304,6 +324,7 @@ text_sensor:
       
       return {"E1: " + std::to_string(xyeVars.recData[23]) + " E2: " + std::to_string(xyeVars.recData[23])};
 
+# the last message received from the air handler. sorry it is in decimal :(
   - platform: template
     name: "Full data string"
     update_interval: 15s

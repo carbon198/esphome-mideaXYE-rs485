@@ -7,15 +7,15 @@ script:
   - id: check_serial
     then:
       - lambda: |-
-          if (!mySerial)
+          if (!Serial2)
           {
-            mySerial.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
+            Serial2.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
           } 
           
   - id: wait_send
     then:
     - lambda: |-
-        mySerial.write(xyeVars.waitSendData,16);
+        Serial2.write(xyeVars.waitSendData,16);
         xyeVars.waitingForResponse = 1;
         xyeVars.waitingToSend = 0;
         xyeVars.commandSent = 1;
@@ -45,9 +45,9 @@ script:
         ESP_LOGI("custom","sum of values for CRC calc is %i",crc);
         xyeVars.sendData[SEND_CRC] = 0xFF - (crc&0xFF);
         ESP_LOGI("custom","calculated CRC is %x",crc);
-        resp = mySerial.available();
+        resp = Serial2.available();
         if (resp==0) {
-          mySerial.write(xyeVars.sendData, SEND_LEN);
+          Serial2.write(xyeVars.sendData, SEND_LEN);
           for (i=0;i<SEND_LEN;i++)
           {
             ESP_LOGI("custom","%x",xyeVars.sendData[i]);
@@ -177,7 +177,7 @@ sensor:
       xyeVars.doneReading = 0;
       //ESP_LOGI("custom","checking for incoming serial data");
       id(check_serial).execute();
-      resp = mySerial.available();
+      resp = Serial2.available();
       if (resp>0)
       {
         ESP_LOGI("custom","there are %i bytes of data waiting",resp);
@@ -188,10 +188,10 @@ sensor:
           {
             if (i<30)
             {
-              xyeVars.recData[i] = mySerial.read();
+              xyeVars.recData[i] = Serial2.read();
             } else
             {
-              mySerial.read();
+              Serial2.read();
             }
           }
           ESP_LOGI("custom","done reading, examining data");
@@ -203,7 +203,7 @@ sensor:
           // it's been 2 update cycles with no change in length of data, this is leftover data. dump it.
           for (i=0;i<resp;i++)
           {
-            mySerial.read();
+            Serial2.read();
           }
           ESP_LOGI("custom","dumped some data: %i",resp);
           xyeVars.waitingForResponse = 0;
@@ -245,12 +245,12 @@ sensor:
     internal: true
     update_interval: 15s
     lambda: |-
-      uint8_t resp=mySerial.available();
+      uint8_t resp=Serial2.available();
       ESP_LOGI("custom","going to send a query package...");
       if (!((xyeVars.waitingToSend == 1) || (resp != 0)))
       {
         id(check_serial).execute();
-        mySerial.write(xyeVars.queryData,16);
+        Serial2.write(xyeVars.queryData,16);
         ESP_LOGI("custom","sent query package, waiting for response...");
         xyeVars.waitingForResponse = 1;
       } else 

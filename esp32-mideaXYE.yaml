@@ -1,21 +1,18 @@
 # need to add these lines to your "esphome" section
-#  includes:
-#    - xyeVars.h
+  # includes:
+  #   - xyeVars.h
+  # on_boot:
+  #   priority: -100
+  #   then:
+  #     - lambda: |-
+  #         Serial2.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
+
 
 # uncomment to enable the web server for easier debugging. You can access the interface
 # at the IP address of your esp device after it connects to the network.
 #web_server:
 
-# script to start the serial connection
-script:
-  - id: check_serial
-    then:
-      - lambda: |-
-          if (!Serial2)
-          {
-            Serial2.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
-          } 
-          
+script:          
 # this script sends data that was blocked by incoming data
   - id: wait_send
     then:
@@ -29,7 +26,6 @@ script:
 # when required.  It tries to not send if we're in the middle of receiving.
   - id: send_command
     then:
-    - script.execute: check_serial
     - lambda: |-
         uint8_t resp;
         xyeVars.sendData[SEND_MODE] = xyeVars.opBytes;
@@ -185,7 +181,6 @@ sensor:
       uint8_t i,resp;
       xyeVars.doneReading = 0;
       //ESP_LOGI("custom","checking for incoming serial data");
-      id(check_serial).execute();
       resp = Serial2.available();
       if (resp>0)
       {
@@ -248,6 +243,7 @@ sensor:
       }
       return 0;
 
+
 # this sensor updates every 15 seconds. when it updates, it sends a query package to the
 # air handler. The query package is the always the same, xyeVars.queryData.
   - platform: template
@@ -260,7 +256,6 @@ sensor:
       ESP_LOGI("custom","going to send a query package...");
       if (!((xyeVars.waitingToSend == 1) || (resp != 0)))
       {
-        id(check_serial).execute();
         Serial2.write(xyeVars.queryData,16);
         ESP_LOGI("custom","sent query package, waiting for response...");
         xyeVars.waitingForResponse = 1;

@@ -1,23 +1,18 @@
-# need to add these lines to your "esphome" section
-#  includes:
-#    - xyeVars.h
-
-# uncomment the web server to help with debugging, you can access
-# the logs and interface with the sensors at the IP address of your ESP device
+#uncomment to enable the web server for debugging
 #web_server:
 
-# script to start the serial connection
-script:
-  - id: check_serial
-    then:
-      - lambda: |-
-          if (!Serial)
-          {
-            Serial.begin(4800, SERIAL_8N1);
-            Serial.swap();
-          } 
+# need to add these lines to your "esphome" section
+  # includes:
+  #   - xyeVars.h
+  # on_boot: 
+  #   priority: -100
+  #   then:
+  #     - lambda: |-
+  #         Serial.begin(4800,SERIAL_8N1);
+  #         Serial.swap();
 
 # this script sends data that was blocked by incoming data
+script:
   - id: wait_send
     then:
     - lambda: |-
@@ -30,7 +25,6 @@ script:
 # when required.  It tries to not send if we're in the middle of receiving.
   - id: send_command
     then:
-    - script.execute: check_serial
     - lambda: |-
         uint8_t resp;
         xyeVars.sendData[SEND_MODE] = xyeVars.opBytes;
@@ -185,7 +179,6 @@ sensor:
     lambda: |-
       uint8_t i,resp;
       xyeVars.doneReading = 0;
-      id(check_serial).execute();
       resp = Serial.available();
       if (resp>0)
       {
@@ -260,7 +253,6 @@ sensor:
       ESP_LOGI("custom","going to send a query package...");
       if (!((xyeVars.waitingToSend == 1) || (resp != 0)))
       {
-        id(check_serial).execute();
         Serial.write(xyeVars.queryData,16);
         ESP_LOGI("custom","sent query package, waiting for response...");
         xyeVars.waitingForResponse = 1;

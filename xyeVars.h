@@ -1,8 +1,6 @@
 #include "esphome.h"
-#include "HardwareSerial.h"
+//#include "HardwareSerial.h"
 
-// change to 1 if using 8266 board
-#define IS_8266 0
 
 #define RX_PIN 16
 #define TX_PIN 17
@@ -23,11 +21,8 @@
 #define T3_INDEX 14
 
 using namespace esphome;
-#if (IS_8266==1)
-    Serial mySerial();
-#else
-    HardwareSerial mySerial(2);
-#endif
+
+
 
 class xyeVars {
   public:

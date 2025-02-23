@@ -1,6 +1,4 @@
 #include "esphome.h"
-//#include "HardwareSerial.h"
-
 
 #define RX_PIN 16
 #define TX_PIN 17

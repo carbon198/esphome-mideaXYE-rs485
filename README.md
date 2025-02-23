@@ -3,6 +3,9 @@ ESPhome files to communicate with Midea AC units via RS485 XYE (CCM) terminals.
 
 This project will allow you to wirelessly communicate with your Midea AC unit via the XYE terminals.  These terminals are normally used for communication with a Central Controller Module (CCM) but the data has been reverse engineered (https://codeberg.org/xye/xye).  I initially used the code from bunicutz project https://github.com/Bunicutz/ESP32_Midea_RS485/tree/main, but as of ESPHome 2025.2.0 custom components are no longer supported and that code does not work.  This project doesn't use custom components, just several lambda functions and a header file.  I'm not a C++ developer, so forgive me if the code isn't very elegant. It gets the job done though!
 
+# NOTE
+For some reason when this boots, it will set your unit to OFF. Just remember that every time you upload new code or restart the ESP device it will probably turn off your AC.  I am working to add a few globals that save the states of things and restore from flash, then set the variables and send a new command to restore settings. But haven't done this yet.
+
 # ESP32-based setup
 ## Hardware
 1. ESP32 device

@@ -20,7 +20,13 @@
 
 using namespace esphome;
 
-
+#if defined(ESP8266)
+    #define IS_8266 1
+    HardwareSerial mySerial(0);
+#else
+    #define IS_8266 0
+    HardwareSerial mySerial(2);
+#endif
 
 class xyeVars {
   public:

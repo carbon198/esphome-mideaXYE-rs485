@@ -26,7 +26,7 @@ on_boot:
   priority: -100
   then:
     - lambda: |-
-        Serial2.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
+        mySerial.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
 ```
 4. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
 5. Edit the #define section of the xyeVars.h file to match your GPIO pins for RX and TX (if necessary).  
@@ -54,8 +54,8 @@ on_boot:
   priority: -100
   then:
     - lambda: |-
-        Serial.begin(4800,Serial_8N1);
-        Serial.swap();
+        mySerial.begin(4800,Serial_8N1);
+        mySerial.swap();
 ```
 4. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
 5. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity

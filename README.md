@@ -46,7 +46,8 @@ This was intended for use with Home Assistant, the YAML file is for ESPHome.
 
 1. Create a new ESPHome device and configure it with your wifi info
 2. Paste the contents of "esp8266-mideaXYE.yaml" under the auto-populated info in your new ESPHome device
-3. Under the `esphome:` yaml header in your file add:
+3. Under the `logger:` section add '- baud_rate: 0` to disable logging on the serial bus (there is only 1 available and we need it!).
+4. Under the `esphome:` yaml header in your file add:
 ```
 includes:
   - xyeVars.h
@@ -57,8 +58,8 @@ on_boot:
         mySerial.begin(4800,Serial_8N1);
         mySerial.swap();
 ```
-4. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
-5. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity
+5. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
+6. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity
 
 # Other info
 When I changed my wired controller to Fahrenheit it seems that internally the air handler / heat pump is using all degrees Fahrenheit now.  If you're using Celsius then comment out the Fahrenheit lines and uncomment Celsius lines in the yaml file. As long as you have your default units set correctly in Home Assistant AND your "wired controller" for your unit is reading out in Celsius then everything should be fine, no conversions or math necessary.

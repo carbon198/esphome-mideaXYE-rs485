@@ -2,6 +2,10 @@
 #uncomment to enable the web server for debugging
 #web_server:
 
+# disable logging on the serial port, add this line to you
+# your logger section:
+#  - baud_rate: 0
+
 # need to add these lines to your "esphome" section
   # includes:
   #   - xyeVars.h
@@ -11,6 +15,7 @@
   #     - lambda: |-
   #         mySerial.begin(4800,SERIAL_8N1);
   #         mySerial.swap();
+
 
 # this script sends data that was blocked by incoming data
 script:

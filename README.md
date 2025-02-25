@@ -41,7 +41,7 @@ on_boot:
 4. Connect ESP Vin, GND, GPIO13 to RX, and GPIO15 to TX on the UART side of the transceiver).
 5. On the RS-485 transceiver connect A to X, B to Y, and GND to E (optional).
 
-# Software
+## Software
 This was intended for use with Home Assistant, the YAML file is for ESPHome. 
 
 1. Create a new ESPHome device and configure it with your wifi info

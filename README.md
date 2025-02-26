@@ -23,7 +23,7 @@ This was intended for use with Home Assistant, the YAML file is for ESPHome.
 includes:
   - xyeVars.h
 on_boot:
-  priority: -100
+  priority: 800
   then:
     - lambda: |-
         mySerial.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
@@ -52,7 +52,7 @@ This was intended for use with Home Assistant, the YAML file is for ESPHome.
 includes:
   - xyeVars.h
 on_boot:
-  priority: -100
+  priority: 800
   then:
     - lambda: |-
         mySerial.begin(4800,Serial_8N1);
@@ -77,7 +77,7 @@ The device that is created will have the following entities:
 - Sensor Coil B Temp - Refrigerant temperature (this value is stuck for me, not useful)
 - Sensor Outdoor Temp
 - Sensor Error Codes - 2 bytes of error codes. I haven't had an error code to test these but they will be the integer form of the 2 hex codes. The reverese engineered XYE notes aren't very clear on these.
-- Sensor Full data string - Integer list of all the data received most recently from the Midea unit. Can match these up to the XYE reverse engineered values to check what data is coming in. Sorry it's not in hex, my C++ isn't strong enough haha.
+- Sensor Full data string - Hex bytes received most recently from unit. Can match these up to the XYE reverse engineered values to check what data is coming in. 
 
 # How it works
 The code sends a `query` set every 15s.  It checks `mySerial.available()` every 1s and reads data (there will only be data there after sending a query or a command).  The "receiver" sensor is running the 1s read check and updating internal variables with the read values.  Each of the actual sensors (temperatures, setpoints, modes, etc) are checking the internal values every 1s.  If any of the input elements are changed from home assistant, they fire a lambda function that forms a `command` set and writes it to the serial bus.  The response to a command to change something is always the old state (not sure why) so I dumped the first response after sending a command. 

@@ -1,4 +1,4 @@
-# need to add these lines to your "esphome" section
+# need to add these lines to your "esphome" section if ESP32
   # includes:
   #   - xyeVars.h
   # on_boot:
@@ -6,6 +6,16 @@
   #   then:
   #     - lambda: |-
   #         mySerial.begin(4800, SERIAL_8N1, RX_PIN, TX_PIN);
+
+  # need to add these lines to your "esphome" section if ESP8266
+  # includes:
+  #   - xyeVars.h
+  # on_boot:
+  #   priority: 800
+  #   then:
+  #     - lambda: |-
+  #         mySerial.begin(4800, SERIAL_8N1);
+  #         mySerial.swap();
 
 
 

@@ -17,7 +17,7 @@ For some reason when this boots, it will set your unit to OFF. Just remember tha
 This was intended for use with Home Assistant, the YAML file is for ESPHome. 
 
 1. Create a new ESPHome device and configure it with your wifi info
-2. If using ESP32: Paste the contents of "esp32-mideaXYE.yaml" under the auto-populated info in your new ESPHome device.
+2. Paste the contents of "esphome-mideaXYE.yaml" under the auto-populated info in your new ESPHome device.
 3. Under the `esphome:` yaml header in your file add:
 ```
 includes:
@@ -45,7 +45,7 @@ on_boot:
 This was intended for use with Home Assistant, the YAML file is for ESPHome. 
 
 1. Create a new ESPHome device and configure it with your wifi info
-2. Paste the contents of "esp8266-mideaXYE.yaml" under the auto-populated info in your new ESPHome device
+2. Paste the contents of "esphome-mideaXYE.yaml" under the auto-populated info in your new ESPHome device
 3. Under the `logger:` section add `- baud_rate: 0` to disable logging on the serial bus (there is only 1 available and we need it!).
 4. Under the `esphome:` yaml header in your file add:
 ```

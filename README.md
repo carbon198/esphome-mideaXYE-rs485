@@ -30,7 +30,7 @@ on_boot:
 ```
 4. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
 5. Edit the #define section of the xyeVars.h file to match your GPIO pins for RX and TX (if necessary).  
-6. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity
+6. Uncomment the entire thermostat section at the bottom and change `internal: True` to False if you want ESPHome to create a thermostat entity
 7. When I changed my wired controller to Fahrenheit it seems that internally the air handler / heat pump is using all degrees Fahrenheit now.  If you're using Celsius then comment out the Fahrenheit lines and uncomment Celsius lines in the yaml file. As long as you have your default units set correctly in Home Assistant AND your "wired controller" for your unit is reading out in Celsius then everything should be fine, no conversions or math necessary.
     
 # ESP8266-based device setup --- UNTESTED
@@ -59,7 +59,7 @@ on_boot:
         mySerial.swap();
 ```
 5. Copy "xyeVars.h" into your /config/esphome directory (or wherever your ESPhome YAML files are in your setup).
-6. Change `internal: True` to False under the thermostat section if you want ESPHome to create a thermostat entity
+6. Uncomment the entire thermostat section at the bottom and change `internal: True` to False if you want ESPHome to create a thermostat entity
 
 # Other info
 When I changed my wired controller to Fahrenheit it seems that internally the air handler / heat pump is using all degrees Fahrenheit now.  If you're using Celsius then comment out the Fahrenheit lines and uncomment Celsius lines in the yaml file. As long as you have your default units set correctly in Home Assistant AND your "wired controller" for your unit is reading out in Celsius then everything should be fine, no conversions or math necessary.

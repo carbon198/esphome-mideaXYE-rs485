@@ -57,10 +57,6 @@ script:
           if (resp==0) 
           {
             mySerial.write(xyeVars.sendData, SEND_LEN);
-            for (i=0;i<SEND_LEN;i++)
-            {
-              ESP_LOGI("custom","%x",xyeVars.sendData[i]);
-            }
             ESP_LOGI("custom","sent command");
             xyeVars.waitingForResponse = true;
             xyeVars.commandSent = true;
@@ -469,7 +465,7 @@ select:
             if (xyeVars.op == "off"){
               xyeVars.opBytes = 0x00;
             } else if (xyeVars.op == "auto"){
-              xyeVars.opBytes = 0x80;
+              xyeVars.opBytes = 0x91;
             } else if (xyeVars.op == "cool"){
               xyeVars.opBytes = 0x88;
             } else if (xyeVars.op == "dry"){
@@ -492,7 +488,7 @@ select:
         case 0x00:
           xyeVars.op = "off";
           break;
-        case 0x80:
+        case 0x91:
           xyeVars.op = "auto";
           break;
         case 0x88:

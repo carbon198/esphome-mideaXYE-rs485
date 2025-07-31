@@ -2,7 +2,7 @@ esphome:
   name: attic-heat-pump-remote
   friendly_name: attic heat pump remote
   includes:
-    - xyeVars3.h
+    - debugger_method_vars.h
 
 
 

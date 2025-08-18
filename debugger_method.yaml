@@ -200,23 +200,22 @@ interval:
                 commandSent = true;
               }
 
- #send follow me temp every 60s
-  - interval: 30s
-    startup_delay: 20s
-    then:
-      - lambda: |-
-          if (!newInput && opBytes > 0x10 && !isnan(id(current_temperature).state)) {
-            id(send_follow_me).press();
-            commandSent = true;
-          }
+ # Uncomment to send follow me temp every 60s
+ # - interval: 30s
+ #   startup_delay: 20s
+ #   then:
+ #     - lambda: |-
+ #         if (!newInput && opBytes > 0x10 && !isnan(id(current_temperature).state)) {
+ #           id(send_follow_me).press();
+ #           commandSent = true;
+ #         }
           
 
 sensor:
-# Uncomment to enable sending the follow me temp to the air handler. Will force everything to celcius for some reason.
-# Set the entity_id to the sensor you want as your source temperature.
-#  - platform: homeassistant
-#    id: current_temperature
-#    entity_id: sensor.main_floor_current_temperature
+  # For follow me, set the entity_id to the sensor you want as your source temperature.
+  - platform: homeassistant
+    id: current_temperature
+    entity_id: sensor.main_floor_current_temperature
 
   - platform: internal_temperature
     name: "Internal Temperature"

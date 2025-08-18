@@ -80,7 +80,7 @@ uart:
           } else if (newInput){
           } else {
             std::copy(bytes.begin(), bytes.end(), recData.begin());
-            bool theyMatch = true;
+            bool theyMatch = recData[1] != 0xc6; # don't use follow me responses
             uint8_t i;
             for (i=0;i<6;++i)
             {

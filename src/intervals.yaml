@@ -137,13 +137,13 @@
     - lambda: |-
         if (!id(first_boot) && id(auto_heat_cool).state) {
           float current_temp = id(follow_me).state ? id(follow_me_temp).state : id(t1_temp).state;
-          if (id(op_bytes) != 0x84 && current_temp < id(heatingSetPoint).state) {
+          if (id(op_bytes) != 0x84 && current_temp < id(heatingSetPoint).state && id(coolingSetPoint).state - id(heatingSetPoint).state >= 1) {
             id(op) = "heat";
             id(op_bytes) = 0x84;
             id(new_input) = true;
           }
 
-          if (id(op_bytes) != 0x88 && current_temp > id(coolingSetPoint).state) {
+          if (id(op_bytes) != 0x88 && current_temp > id(coolingSetPoint).state && id(coolingSetPoint).state - id(heatingSetPoint).state >= 1) {
             id(op) = "cool";
             id(op_bytes) = 0x88;
             id(new_input) = true;

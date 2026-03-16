@@ -36,3 +36,29 @@
   on_value: 
     - lambda: |-
         id(last_follow_me_update) = static_cast<uint32_t>(id(uptime_sensor).state);
+
+- platform: template
+  name: "Cooling Set Point"
+  id: coolingSetPoint
+  step: 1
+  mode: box
+  min_value: 0
+  max_value: 100
+  restore_value: True
+  unit_of_measurement: "${'°F' if use_fahrenheit == true else '°C'}"
+  device_class: temperature
+  update_interval: 1s
+  optimistic: True
+
+- platform: template
+  name: "Heating Set Point"
+  id: heatingSetPoint
+  step: 1
+  mode: box
+  min_value: 0
+  max_value: 100
+  restore_value: True
+  unit_of_measurement: "${'°F' if use_fahrenheit == true else '°C'}"
+  device_class: temperature
+  update_interval: 1s
+  optimistic: True

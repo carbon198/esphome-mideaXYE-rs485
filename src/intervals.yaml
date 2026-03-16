@@ -135,6 +135,33 @@
   startup_delay: 10s
   then:
     - lambda: |-
+        if (!id(first_boot) && id(auto_heat_cool).state) {
+          float current_temp = id(follow_me).state ? id(follow_me_temp).state : id(t1_temp).state;
+          if (id(op_bytes) != 0x84 && current_temp < id(heatingSetPoint).state) {
+            id(op) = "heat";
+            id(op_bytes = 0x84);
+            id(new_input) = true;
+          }
+
+          if (id(op_bytes) != 0x88 && current_temp > id(coolingSetPoint).state) {
+            id(op) = "cool";
+            id(op_bytes = 0x88);
+            id(new_input) = true;
+          }
+
+          if (id(op_bytes) == 0x84 && id(setPoint).state != id(heatingSetPoint).state) {
+            auto call = id(setPoint).make_call();
+            call.set_value(id(heatingSetPoint).state);
+            call.perform();
+          }
+
+          if (id(op_bytes) == 0x88 && id(setPoint).state != id(coolingSetPoint).state) {
+            auto call = id(setPoint).make_call();
+            call.set_value(id(coolingSetPoint).state);
+            call.perform();
+          }
+        }
+
         // if we have new data to send, send the update packet
         if (!id(first_boot) && id(new_input) && !id(command_sent)) {
           id(send_button).press();

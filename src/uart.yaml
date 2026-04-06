@@ -49,7 +49,6 @@ debug:
           if (bytes[1] == 0xC4) 
           {
             id(t4_temp).publish_state((bytes[21] - 0x28) / 2);
-            // sometimes this temporarily gives erroneous values before correcting itself, ignore them
             if (id(use_fahrenheit))
             {
               if (bytes[18] > 0x87 && bytes[18] < 215) {
@@ -91,6 +90,91 @@ debug:
             // we only capture the celcius set point here, since it always comes back celcius no matter what mode the unit is in
             if (!id(use_fahrenheit)) {
               id(set_temp) = bytes[10];
+            }
+
+            if (!id(first_boot)) {
+              float set_point_c;
+              if (id(use_fahrenheit)) {
+                set_point_c = (id(set_temp) - 32) * 5.0 / 9.0;
+              } else {
+                set_point_c = id(set_temp);
+              }
+
+              // heating set point update on climate entity
+              if (id(op_bytes) == 0x84) {
+                if (set_point_c != id(climate_entity).target_temperature_low) {
+                  id(climate_entity).make_call().set_target_temperature_low(set_point_c).perform();
+                }
+              }
+
+              // cooling set point update on climate entity
+              if (id(op_bytes) == 0x88) {
+                if (set_point_c != id(climate_entity).target_temperature_high) {
+                  id(climate_entity).make_call().set_target_temperature_high(set_point_c).perform();
+                }
+              }
+            }
+
+            switch (id(op_bytes))
+            {
+              case 0x00:
+                if (id(climate_entity).mode != CLIMATE_MODE_OFF) {
+                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_OFF).perform();
+                }
+                break;
+              case 0x91:
+              case 0x98:
+              case 0x10:
+              case 0x94:
+                break;
+              case 0x88:
+                if (id(climate_entity).mode != CLIMATE_MODE_HEAT_COOL && id(climate_entity).mode != CLIMATE_MODE_COOL) {
+                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_COOL).perform();
+                }
+                break;
+              case 0x82:
+                if (id(climate_entity).mode != CLIMATE_MODE_DRY) {
+                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_DRY).perform();
+                }
+                break;
+              case 0x84:
+                if (id(climate_entity).mode != CLIMATE_MODE_HEAT_COOL && id(climate_entity).mode != CLIMATE_MODE_HEAT) {
+                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_HEAT).perform();
+                }
+                break;
+              case 0x81:
+                if (id(climate_entity).mode != CLIMATE_MODE_FAN_ONLY) {
+                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_FAN_ONLY).perform();
+                }
+                break;
+              default:
+                break;
+            }
+
+            switch (id(fan_bytes))
+            {
+              case 0x80:
+                if (id(climate_entity).fan_mode != CLIMATE_FAN_AUTO) {
+                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_AUTO).perform();
+                }
+                break;
+              case 0x01:
+                if (id(climate_entity).fan_mode != CLIMATE_FAN_HIGH) {
+                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_HIGH).perform();
+                }
+                break;
+              case 0x02:
+                if (id(climate_entity).fan_mode != CLIMATE_FAN_MEDIUM) {
+                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_MEDIUM).perform();
+                }
+                break;
+              case 0x04:
+                if (id(climate_entity).fan_mode != CLIMATE_FAN_LOW) {
+                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_LOW).perform();
+                }
+                break;
+              default:
+                break;
             }
 
             // these sensors are offset by 0x28 and in units of 0.5C regardless of what mode the unit is in

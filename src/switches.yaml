@@ -3,9 +3,3 @@
   id: follow_me
   optimistic: true
   restore_mode: RESTORE_DEFAULT_OFF
-
-- platform: template
-  name: "Auto Heat & Cool"
-  id: auto_heat_cool
-  optimistic: true
-  restore_mode: RESTORE_DEFAULT_OFF

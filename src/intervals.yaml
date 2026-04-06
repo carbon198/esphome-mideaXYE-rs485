@@ -135,34 +135,41 @@
   startup_delay: 10s
   then:
     - lambda: |-
-        if (!id(first_boot) && id(auto_heat_cool).state) {
+        if (!id(first_boot) && !id(new_input) && id(climate_entity).mode == climate::CLIMATE_MODE_HEAT_COOL) {
           float current_temp = id(follow_me).state ? id(follow_me_temp).state : id(t1_temp).state;
-          
-          if (id(use_fahrenheit)) {
-            current_temp = (current_temp * 9.0 / 5.0) + 32.0;
-          }
-          if (id(op_bytes) != 0x84 && current_temp < id(heatingSetPoint).state && id(coolingSetPoint).state - id(heatingSetPoint).state >= 1) {
-            id(op) = "heat";
+
+          if (id(op_bytes) != 0x84 && current_temp <= id(climate_entity).target_temperature_low) {
+            ESP_LOGI("custom","changing to heat mode");
             id(op_bytes) = 0x84;
             id(new_input) = true;
           }
 
-          if (id(op_bytes) != 0x88 && current_temp > id(coolingSetPoint).state && id(coolingSetPoint).state - id(heatingSetPoint).state >= 1) {
-            id(op) = "cool";
+          if (id(op_bytes) != 0x88 && current_temp >= id(climate_entity).target_temperature_high) {
+            ESP_LOGI("custom","changing to cool mode");
             id(op_bytes) = 0x88;
             id(new_input) = true;
           }
 
-          if (id(op_bytes) == 0x84 && id(setPoint).state != id(heatingSetPoint).state) {
-            auto call = id(setPoint).make_call();
-            call.set_value(id(heatingSetPoint).state);
-            call.perform();
+          float low_temp = id(climate_entity).target_temperature_low;
+          if (id(use_fahrenheit)) {
+            low_temp = low_temp * (9.0/5.0) + 32.0;
           }
 
-          if (id(op_bytes) == 0x88 && id(setPoint).state != id(coolingSetPoint).state) {
-            auto call = id(setPoint).make_call();
-            call.set_value(id(coolingSetPoint).state);
-            call.perform();
+          if (id(op_bytes) == 0x84 && id(set_temp) != low_temp) {
+            ESP_LOGI("custom","Got new set point for heat-- old: %i, new: %f",id(set_temp), low_temp);
+            id(set_temp) = low_temp;
+            id(new_input) = true;
+          }
+
+          float high_temp = id(climate_entity).target_temperature_high;
+          if (id(use_fahrenheit)) {
+            high_temp = high_temp * (9.0/5.0) + 32.0;
+          }
+
+          if (id(op_bytes) == 0x88 && id(set_temp) != high_temp) {
+            ESP_LOGI("custom","Got new set point for cool-- old: %i, new: %f",id(set_temp), high_temp);
+            id(set_temp) = high_temp;
+            id(new_input) = true;
           }
         }
 

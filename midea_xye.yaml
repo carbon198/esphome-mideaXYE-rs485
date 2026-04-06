@@ -20,8 +20,8 @@ binary_sensor: !include src/binary_sensors.yaml
 
 text_sensor: !include src/text_sensors.yaml
 
-select: !include src/selects.yaml
-
 switch: !include src/switches.yaml
 
 number: !include src/numbers.yaml
+
+climate: !include src/climate.yaml

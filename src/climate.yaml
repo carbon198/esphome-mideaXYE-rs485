@@ -1,0 +1,175 @@
+platform: thermostat
+name: "Climate"
+id: climate_entity
+sensor: t1_temp
+min_cooling_off_time: 1s
+min_cooling_run_time: 1s
+min_heating_off_time: 1s
+min_heating_run_time: 1s
+min_fanning_off_time: 1s
+min_fanning_run_time: 1s
+min_fan_mode_switching_time: 1s
+min_idle_time: 1s
+on_boot_restore_from: MEMORY
+visual:
+  temperature_step: "${'1 °F' if use_fahrenheit == true else '1 °C'}"
+default_preset: home 
+preset:
+  - name: home
+    default_target_temperature_low: "${'68 °F' if use_fahrenheit == true else '20 °C'}"
+    default_target_temperature_high: "${'72 °F' if use_fahrenheit == true else '22 °C'}"
+    mode: heat_cool
+heat_cool_mode:
+  - lambda: |-
+      if (id(first_boot)) {
+        return;
+      }
+      float current_temp = id(follow_me).state ? id(follow_me_temp).state : id(t1_temp).state;
+      float average_of_set_points = (id(climate_entity).target_temperature_low + id(climate_entity).target_temperature_high) / 2;
+
+      if (id(op_bytes) != 0x84 && current_temp <= average_of_set_points) {
+        ESP_LOGI("custom","Changing mode to heat");
+        id(op_bytes) = 0x84;
+        id(new_input) = true;
+      }
+
+      if (id(op_bytes) != 0x88 && current_temp > average_of_set_points) {
+        ESP_LOGI("custom","Changing mode to cool");
+        id(op_bytes) = 0x88;
+        id(new_input) = true;
+      }
+      float low_temp = id(climate_entity).target_temperature_low;
+
+      if (id(use_fahrenheit)) {
+        low_temp = low_temp * (9.0/5.0) + 32.0;
+      }
+      if (id(op_bytes) == 0x84 && id(set_temp) != low_temp) {
+        ESP_LOGI("custom","Got new set point for cool-- old: %i, new: %f",id(set_temp), low_temp);
+        id(set_temp) = low_temp;
+        id(new_input) = true;
+      }
+
+      float high_temp = id(climate_entity).target_temperature_high;
+
+      if (id(use_fahrenheit)) {
+        high_temp = high_temp * (9.0/5.0) + 32.0;
+      }
+      if (id(op_bytes) == 0x88 && id(set_temp) != high_temp) {
+        ESP_LOGI("custom","Got new set point for cool-- old: %i, new: %f",id(set_temp), high_temp);
+        id(set_temp) = high_temp;
+        id(new_input) = true;
+      }
+
+heat_mode:
+  - lambda: |-
+      if (!id(first_boot) && id(op_bytes) != 0x84) {
+        ESP_LOGI("custom","Changing mode to heat");
+        id(op_bytes) = 0x84;
+        id(new_input) = true;
+      }
+cool_mode:
+  - lambda: |-
+      if (!id(first_boot) && id(op_bytes) != 0x88) {
+        ESP_LOGI("custom","Changing mode to cool");
+        id(op_bytes) = 0x88;
+        id(new_input) = true;
+      }
+fan_only_mode:
+  - lambda: |-
+      if (!id(first_boot) && id(op_bytes) != 0x81) {
+        ESP_LOGI("custom","Changing mode to fan only");
+        id(op_bytes) = 0x81;
+        id(new_input) = true;
+      }
+dry_mode:
+  lambda: |-
+      if (!id(first_boot) && id(op_bytes) != 0x82) {
+        ESP_LOGI("custom","Changing mode to dry");
+        id(op_bytes) = 0x82;
+        id(new_input) = true;
+      }
+on_state:
+  - lambda: |-
+      if (id(first_boot)) {
+        return;
+      }
+      float low_temp = x.target_temperature_low;
+
+      if (id(use_fahrenheit)) {
+        low_temp = low_temp * (9.0/5.0) + 32.0;
+      }
+      if (id(op_bytes) == 0x84 && id(set_temp) != low_temp) {
+        ESP_LOGI("custom","Got new set point for heat-- old: %i, new: %f",id(set_temp), low_temp);
+        id(set_temp) = low_temp;
+        id(new_input) = true;
+      }
+
+      float high_temp = x.target_temperature_high;
+
+      if (id(use_fahrenheit)) {
+        high_temp = high_temp * (9.0/5.0) + 32.0;
+      }
+      if (id(op_bytes) == 0x88 && id(set_temp) != high_temp) {
+        ESP_LOGI("custom","Got new set point for cool-- old: %i, new: %f",id(set_temp), high_temp);
+        id(set_temp) = high_temp;
+        id(new_input) = true;
+      }
+  - lambda: |-
+        if (id(first_boot)) {
+          return;
+        }
+        if (x.fan_mode == climate::CLIMATE_FAN_HIGH && id(fan_bytes) != 0x01) {
+          ESP_LOGI("custom","Changing fan mode to high");
+          id(fan_bytes) = 0x01;
+          id(new_input) = true;
+        }
+        if (x.fan_mode == climate::CLIMATE_FAN_AUTO && id(fan_bytes) < 0x80) {
+          ESP_LOGI("custom","Changing fan mode to auto");
+          id(fan_bytes) = 0x80;
+          id(new_input) = true;
+        }
+        if (x.fan_mode == climate::CLIMATE_FAN_MEDIUM && id(fan_bytes) != 0x02) {
+          ESP_LOGI("custom","Changing fan mode to medium");
+          id(fan_bytes) = 0x02;
+          id(new_input) = true;
+        }
+        if (x.fan_mode == climate::CLIMATE_FAN_LOW && id(fan_bytes) != 0x04) {
+          ESP_LOGI("custom","Changing fan mode to low");
+          id(fan_bytes) = 0x04;
+          id(new_input) = true;
+        }
+  - if:
+      condition:
+        lambda: 'return x.mode == climate::CLIMATE_MODE_OFF;'
+      then:
+        - lambda: |-
+            ESP_LOGI("custom","Changing mode to off");
+            id(op_bytes) = 0x00;
+            id(new_input) = true;
+heat_action:
+  - lambda: |-
+      //dummy
+cool_action:
+  - lambda: |-
+      //dummy
+fan_only_action:
+  - lambda: |-
+      //dummy
+dry_action:
+  - lambda: |-
+      //dummy
+idle_action:
+  - lambda: |-
+      //dummy
+fan_mode_auto_action:
+  - lambda: |-
+      //dummy
+fan_mode_low_action:
+  - lambda: |-
+      //dummy
+fan_mode_medium_action:
+  - lambda: |-
+      //dummy
+fan_mode_high_action:
+  - lambda: |-
+      //dummy

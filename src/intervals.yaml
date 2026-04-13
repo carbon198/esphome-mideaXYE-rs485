@@ -3,7 +3,7 @@
   then:
     if:
       condition:
-        lambda: 'return !id(command_sent) && !id(new_input);'
+        lambda: 'return id(first_boot) || (!id(command_sent) && !id(new_input));'
       then:
         - uart.write: !lambda |-
             enum PacketType {

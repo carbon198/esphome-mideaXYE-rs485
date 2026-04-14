@@ -143,6 +143,9 @@ on_state:
         lambda: 'return x.mode == climate::CLIMATE_MODE_OFF;'
       then:
         - lambda: |-
+            if (id(first_boot)) {
+              return;
+            }
             ESP_LOGI("custom","Changing mode to off");
             id(op_bytes) = 0x00;
             id(new_input) = true;

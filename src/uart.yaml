@@ -191,14 +191,36 @@ debug:
             id(t2a_temp).publish_state((bytes[12] - 0x28) / 2);
             id(t2b_temp).publish_state((bytes[13] - 0x28) / 2);
             id(t3_temp).publish_state((bytes[14] - 0x28) / 2);
-
+            
             // compressor status and defrost binary sensors. Defrost code may be different on other units, await user feedback
             // byte 19 can apparently indicate outdoor fan and compressor on some units, hence the bitwise comparison for compressor only
             id(compressor_status).publish_state(bytes[19] & 0x01);
-            id(defrost_status).publish_state(bytes[24] == 0x02);
-
-            // error codes. TODO: could use some more investigation
-            id(error_codes).publish_state({"E1: " + std::to_string(bytes[23]) + " E2: " + std::to_string(bytes[24])});
+            // bitwise check on protect_flags bit 1, not equality, so defrost is still
+            // detected even if another protect bit happens to be set simultaneously
+            id(defrost_status).publish_state((bytes[24] & 0x02) != 0);
+            
+            // Error/protect flags per PROTOCOL.md: byte 22/23 = error_flags low/high,
+            // byte 24/25 = protect_flags low/high. Each set bit N => "E{N}" / "P{N}".
+            uint16_t error_flags = (static_cast<uint16_t>(bytes[23]) << 8) | bytes[22];
+            uint16_t protect_flags = (static_cast<uint16_t>(bytes[25]) << 8) | bytes[24];
+            uint16_t protect_flags_no_defrost = protect_flags & ~0x0002;
+            
+            std::string fault_codes;
+            for (int bit = 0; bit < 16; bit++) {
+              if (error_flags & (1 << bit)) {
+                if (!fault_codes.empty()) fault_codes += " ";
+                fault_codes += "E" + std::to_string(bit);
+              }
+            }
+            for (int bit = 0; bit < 16; bit++) {
+              if (protect_flags_no_defrost & (1 << bit)) {
+                if (!fault_codes.empty()) fault_codes += " ";
+                fault_codes += "P" + std::to_string(bit);
+              }
+            }
+            if (fault_codes.empty()) fault_codes = "OK";
+            
+            id(error_codes).publish_state(fault_codes);
           } else 
           {
             ESP_LOGI("custom","First 6 bytes of incoming data were bad, not using values");

@@ -65,3 +65,13 @@
   type: seconds
   update_interval: 1s
   internal: True
+
+# EXPERIMENTAL: unconfirmed meaning (possibly compressor Hz or outdoor fan
+# RPM). Log this over time against known compressor/fan states to validate
+# before trusting the value. See HomeOps/ESPHome-Midea-XYE research notes.
+- platform: template
+  name: "C4 Engineering Word (raw, unconfirmed)"
+  id: c4_engineering_word_raw
+  update_interval: 1s
+  entity_category: diagnostic
+  state_class: measurement

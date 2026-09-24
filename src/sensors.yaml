@@ -65,3 +65,9 @@
   type: seconds
   update_interval: 1s
   internal: True
+
+- platform: template
+  name: "System Status Flags (Raw)"
+  id: system_status_flags_raw
+  entity_category: diagnostic
+  state_class: measurement

@@ -29,3 +29,21 @@
   name: "Inverter Subsystem Fault"
   device_class: problem
   entity_category: diagnostic
+
+- platform: template
+  id: eco_mode
+  name: "Eco Mode"
+
+- platform: template
+  id: turbo_mode
+  name: "Turbo Mode"
+
+- platform: template
+  id: swing_mode
+  name: "Swing Mode"
+
+- platform: template
+  id: ccm_comm_error
+  name: "RS-485 Communication Error"
+  device_class: problem
+  entity_category: diagnostic

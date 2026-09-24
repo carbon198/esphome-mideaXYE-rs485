@@ -22,7 +22,13 @@
 - id: op_bytes
   type: uint8_t
   initial_value: "0"
-- id: mode_flag_bytes
+- id: timer_start_bytes
+  type: uint8_t
+  initial_value: "0"
+- id: timer_stop_bytes
+  type: uint8_t
+  initial_value: "0"
+- id: unit_mode_flags_bytes
   type: uint8_t
   initial_value: "0"
 - id: op

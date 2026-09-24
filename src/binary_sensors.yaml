@@ -18,18 +18,22 @@
   id: compressor_fault
   name: "Compressor Subsystem Fault"
   device_class: problem
+  entity_category: diagnostic
 
 - platform: template
   id: outdoor_fan_fault
   name: "Outdoor Fan Subsystem Fault"
   device_class: problem
+  entity_category: diagnostic
 
 - platform: template
   id: reversing_valve_fault
   name: "4-Way Valve Subsystem Fault"
   device_class: problem
+  entity_category: diagnostic
 
 - platform: template
   id: inverter_fault
   name: "Inverter Subsystem Fault"
   device_class: problem
+  entity_category: diagnostic

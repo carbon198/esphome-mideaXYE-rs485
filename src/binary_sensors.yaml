@@ -7,14 +7,6 @@
   name: "Defrost"
 
 - platform: template
-  id: compressor_active_c4
-  name: "Compressor Active (C4)"
-
-- platform: template
-  id: outdoor_fan_running
-  name: "Outdoor Fan Running"
-
-- platform: template
   id: compressor_fault
   name: "Compressor Subsystem Fault"
   device_class: problem

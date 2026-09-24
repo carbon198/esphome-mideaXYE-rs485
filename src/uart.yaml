@@ -103,7 +103,9 @@ debug:
 
             id(fan_bytes) = bytes[9];
             id(op_bytes) = bytes[8];
-            id(mode_flag_bytes) = bytes[17];
+            id(timer_start_bytes) = bytes[17];
+            id(timer_stop_bytes) = bytes[18];
+            id(unit_mode_flags_bytes) = bytes[20];
 
             // we only capture the celcius set point here, since it always comes back celcius no matter what mode the unit is in
             if (!id(use_fahrenheit)) {

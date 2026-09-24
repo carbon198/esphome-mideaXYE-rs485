@@ -56,30 +56,14 @@ debug:
               }
             }
 
-            // --- Outdoor-unit engineering fields ---
-
-            // Compressor active flag from the C4 frame. This is a DIFFERENT
-            // byte than the C0 bytes[19] compressor flag you already parse.
-            // Useful as a cross-check; log both for a while and see if they
-            // ever disagree on your hardware before trusting one over the other.
-            id(compressor_active_c4).publish_state((bytes[8] & 0x80) != 0);
-
-            // Outdoor fan running. Confirmed as a distinct bit/byte from the
-            // compressor flags above -- this is the field to use for fan
-            // status decoupled from compressor status.
-            id(outdoor_fan_running).publish_state((bytes[10] & 0x80) != 0);
-
-            // Outdoor fan subsystem fault. 0x80 = OK; anything else means a
-            // protection/fault is tripped on the outdoor fan subsystem.
+            // Subsystem OK/fault flags. 0x80 = OK, anything else = a
+            // protection is tripped for that subsystem. Not yet
+            // contradicted by data (compressor being off doesn't imply a
+            // subsystem fault), but still unconfirmed against a real fault.
+            id(compressor_fault).publish_state((bytes[26] & 0x80) == 0);
             id(outdoor_fan_fault).publish_state((bytes[27] & 0x80) == 0);
-
-            // EXPERIMENTAL / UNCONFIRMED: possibly compressor frequency (Hz)
-            // or outdoor fan RPM, big-endian 16-bit. Published as a raw
-            // diagnostic value -- do NOT trust the unit or scale yet. Watch
-            // this alongside known compressor/fan states on YOUR unit to
-            // figure out what it actually represents before relying on it.
-            uint16_t engineering_word = (static_cast<uint16_t>(bytes[19]) << 8) | bytes[20];
-            id(c4_engineering_word_raw).publish_state(engineering_word);
+            id(reversing_valve_fault).publish_state((bytes[28] & 0x80) == 0);
+            id(inverter_fault).publish_state((bytes[29] & 0x80) == 0);
 
             id(first_boot) = false;
             return;

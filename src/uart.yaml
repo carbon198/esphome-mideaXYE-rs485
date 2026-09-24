@@ -56,6 +56,15 @@ debug:
               }
             }
 
+            // system_status_flags (abs byte 16, C4). Confirmed NOT static - changed
+            // between off (0x84) and fan-only (0x81) captures, unlike the
+            // compressor/protection/freq fields which are frozen. Bit 0x80 =
+            // documented "enabled", bit 0x04 = documented "wired controller present".
+            // The bit that flips between these two states (0x04 off vs 0x01 fan-only)
+            // is undocumented - publishing raw for now to build a bitmap across more
+            // operating states (heat, cool, each fan speed) before assigning meaning.
+            id(system_status_flags_raw).publish_state(bytes[16]);
+
             // Subsystem OK/fault flags. 0x80 = OK, anything else = a
             // protection is tripped for that subsystem. Not yet
             // contradicted by data (compressor being off doesn't imply a

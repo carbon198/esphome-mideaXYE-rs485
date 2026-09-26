@@ -265,13 +265,11 @@ debug:
               // subsequent poll. Must mask off 0x08 before switching on GEAR tier,
               // or Turbo+GEAR combined would misread as GEAR=Off.
               bool turbo_reported = (bytes[15] & 0x08) != 0;
-              if (!id(turbo_pending)) {
+              uint8_t reported_tier = bytes[15] & 0x07;
+              if (!id(c6_pending)) {
                 id(turbo_active) = turbo_reported;
                 id(turbo_mode_switch).publish_state(turbo_reported);
-              }
               
-              if (!id(gear_pending)) {
-                uint8_t reported_tier = bytes[15] & 0x07;
                 switch (reported_tier) {
                   case 0x02:
                     id(gear_raw) = 0x40;

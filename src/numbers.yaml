@@ -14,3 +14,17 @@
   on_value: 
     - lambda: |-
         id(last_follow_me_update) = static_cast<uint32_t>(id(uptime_sensor).state);
+
+- platform: template
+  name: "Gear Raw Value"
+  id: gear_raw_number
+  entity_category: config
+  step: 1
+  mode: box
+  min_value: 0
+  max_value: 127
+  restore_value: True
+  optimistic: True
+  on_value:
+    - lambda: |-
+        id(gear_raw) = static_cast<uint8_t>(x);

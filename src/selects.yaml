@@ -22,4 +22,4 @@
         // (still reporting the OLD tier) could arrive and visually revert
         // the selection before our own command goes out.
         id(gear_pending) = true;
-    - button.press: send_gear_button
+    - button.press: send_c6_button

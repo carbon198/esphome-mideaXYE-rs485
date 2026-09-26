@@ -53,3 +53,9 @@
 - id: log_rs485_comms
   type: bool
   initial_value: "${'true' if log_rs485_comms == true else 'false'}"
+- id: follow_me_due
+  type: bool
+  initial_value: 'false'
+- id: gear_raw
+  type: uint8_t
+  initial_value: "0"

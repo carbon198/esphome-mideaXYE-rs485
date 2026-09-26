@@ -65,3 +65,9 @@
 - id: gear_pending
   type: bool
   initial_value: 'false'
+- id: last_follow_me_capable_mode
+  type: bool
+  initial_value: 'false'
+- id: follow_me_mode_change_pending
+  type: bool
+  initial_value: 'false'

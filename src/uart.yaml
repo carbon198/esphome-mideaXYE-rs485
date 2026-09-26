@@ -258,16 +258,20 @@ debug:
               id(reversing_valve_fault).publish_state((bytes[28] & 0x80) == 0);
               id(inverter_fault).publish_state((bytes[29] & 0x80) == 0);
 
-              // GEAR tier acknowledgment (byte15). Confirmed via testing:
-              // only 0x00 (Off), 0x02 (50%), 0x03 (75%) are reachable tiers
-              // - any other requested raw value silently rounds down to the
-              // nearest valid tier below it, and tier 0x01 is never seen.
-              // Skip updating gear_raw/the select while gear_pending is
-              // true, so a stale in-flight response from before the user's
-              // latest change doesn't visually revert their selection
-              // before our own command has actually gone out.
+              // byte15 is a shared "sub-status flags" byte: bits 0-2 hold the GEAR
+              // tier (0x00/0x02/0x03), and bit 0x08 independently reports Turbo -
+              // confirmed via a real capture: byte15 went 0x00 -> 0x08 right after
+              // sending Turbo ON (GEAR still Off), and stayed 0x08 across a
+              // subsequent poll. Must mask off 0x08 before switching on GEAR tier,
+              // or Turbo+GEAR combined would misread as GEAR=Off.
+              bool turbo_reported = (bytes[15] & 0x08) != 0;
+              if (!id(turbo_pending)) {
+                id(turbo_active) = turbo_reported;
+                id(turbo_mode_switch).publish_state(turbo_reported);
+              }
+              
               if (!id(gear_pending)) {
-                uint8_t reported_tier = bytes[15];
+                uint8_t reported_tier = bytes[15] & 0x07;
                 switch (reported_tier) {
                   case 0x02:
                     id(gear_raw) = 0x40;

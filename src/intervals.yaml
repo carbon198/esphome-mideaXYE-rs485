@@ -14,7 +14,7 @@
             bool due = (id(uptime_sensor).state - id(last_follow_me_send_time) >= ${follow_me_interval}) && (id(op_bytes) != 0x00);
             id(follow_me_due) = due && (id(follow_me).state || id(follow_me_init));
             if (id(follow_me_due)) {
-              id(send_follow_me_button).press();
+              id(send_c6_button).press();
             }
         - if:
             condition:

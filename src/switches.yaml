@@ -22,3 +22,22 @@
         }
         id(unit_mode_flags_bytes) &= ~0x01;
         id(new_input) = true;
+
+- platform: template
+  name: "Turbo Mode"
+  id: turbo_mode_switch
+  optimistic: true
+  turn_on_action:
+    - lambda: |-
+        if (id(first_boot)) {
+          return;
+        }
+        id(turbo_active) = true;
+        id(turbo_pending) = true;
+  turn_off_action:
+    - lambda: |-
+        if (id(first_boot)) {
+          return;
+        }
+        id(turbo_active) = false;
+        id(turbo_pending) = true;

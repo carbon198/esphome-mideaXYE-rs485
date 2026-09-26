@@ -62,7 +62,7 @@
 - id: last_tx_millis
   type: uint32_t
   initial_value: "0"
-- id: gear_pending
+- id: c6_pending
   type: bool
   initial_value: 'false'
 - id: last_follow_me_capable_mode
@@ -72,8 +72,5 @@
   type: bool
   initial_value: 'false'
 - id: turbo_active
-  type: bool
-  initial_value: 'false'
-- id: turbo_pending
   type: bool
   initial_value: 'false'

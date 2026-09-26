@@ -35,9 +35,10 @@
             bool follow_me_interval_elapsed = (id(uptime_sensor).state - id(last_follow_me_send_time) >= ${follow_me_interval});
             bool follow_me_reason = unit_online && follow_me_interval_elapsed && (id(follow_me).state || id(follow_me_init));
             bool gear_reason = unit_online && id(gear_pending);
+            bool turbo_reason = unit_online && id(turbo_pending);
             bool mode_change_reason = unit_online && id(follow_me_mode_change_pending);
 
-            id(follow_me_due) = follow_me_reason || gear_reason || mode_change_reason;
+            id(follow_me_due) = follow_me_reason || gear_reason || turbo_reason || mode_change_reason;
             if (id(follow_me_due)) {
               id(send_c6_button).press();
             }

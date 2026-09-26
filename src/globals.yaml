@@ -71,3 +71,9 @@
 - id: follow_me_mode_change_pending
   type: bool
   initial_value: 'false'
+- id: turbo_active
+  type: bool
+  initial_value: 'false'
+- id: turbo_pending
+  type: bool
+  initial_value: 'false'

@@ -2,8 +2,24 @@
   name: "send button"
   id: "send_button"
   internal: true
-  on_press: 
+  on_press:
     - uart.write: !lambda |-
+        // Ensure at least 150ms has passed since our last transmission
+        // before sending another command - this gives the air handler's
+        // response to the previous query time to fully arrive before we
+        // key up on the shared RS-485 bus again. Without this, a command
+        // sent while a response is still in flight causes a bus collision
+        // that corrupts the in-flight response (confirmed via a real
+        // capture: dropped bytes mid-frame, misread by the fixed 32-byte
+        // "after: bytes:" chunking in uart.yaml as valid data, producing a
+        // burst of bogus error codes / impossible temperatures for one
+        // read cycle).
+        uint32_t since_last_tx = millis() - id(last_tx_millis);
+        if (since_last_tx < 150) {
+          delay(150 - since_last_tx);
+        }
+        id(last_tx_millis) = millis();
+
         static std::vector<uint8_t> sendData = {0xaa, 0xc3, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x55};
         sendData[6] = id(op_bytes);
         sendData[7] = id(fan_bytes);
@@ -21,7 +37,7 @@
         uint32_t crc=0;
         int len=16;
         for(i=0;i<len;i++)
-        { 
+        {
           if(i!=14)
           {
             crc+=sendData[i];
@@ -38,6 +54,13 @@
   internal: true
   on_press:
     - uart.write: !lambda |-
+        // See send_button for why this guard exists.
+        uint32_t since_last_tx = millis() - id(last_tx_millis);
+        if (since_last_tx < 150) {
+          delay(150 - since_last_tx);
+        }
+        id(last_tx_millis) = millis();
+
         enum PacketType {
           INIT,
           UPDATE,
@@ -140,15 +163,18 @@
   id: "send_gear_button"
   on_press:
     - uart.write: !lambda |-
+        // See send_button for why this guard exists.
+        uint32_t since_last_tx = millis() - id(last_tx_millis);
+        if (since_last_tx < 150) {
+          delay(150 - since_last_tx);
+        }
+        id(last_tx_millis) = millis();
+
         static std::vector<uint8_t> gearData = {0xaa, 0xc6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x39, 0x00, 0x55};
 
         // Confirmed via a real capture: GEAR must be sent using the
         // STOP/aux-parameter subcommand (0x04/0x44), regardless of
-        // Follow-Me state - a real air handler responded with byte 15 of
-        // its status frame flipping from 0x00 to 0x02 (and staying there
-        // across subsequent polls) only when sent this way. An earlier
-        // attempt using the UPDATE subcommand (0x02/0x42) with the gear
-        // value in byte 8 produced no observable change at all.
+        // Follow-Me state.
         gearData[10] = id(use_fahrenheit) ? 0x44 : 0x04;
         gearData[8] = id(gear_raw);
         gearData[11] = static_cast<uint8_t>(std::round(id(follow_me_temp).state));

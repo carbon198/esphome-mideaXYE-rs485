@@ -74,6 +74,36 @@ debug:
             id(reversing_valve_fault).publish_state((bytes[28] & 0x80) == 0);
             id(inverter_fault).publish_state((bytes[29] & 0x80) == 0);
 
+            // GEAR tier acknowledgment (byte15). Confirmed via testing:
+            // only 0x00 (Off), 0x02 (50%), 0x03 (75%) are reachable tiers
+            // - any other requested raw value silently rounds down to the
+            // nearest valid tier below it, and tier 0x01 is never seen.
+            // Skip updating gear_raw/the select while gear_pending is
+            // true, so a stale in-flight response from before the user's
+            // latest change doesn't visually revert their selection
+            // before our own command has actually gone out.
+            if (!id(gear_pending)) {
+              uint8_t reported_tier = bytes[15];
+              std::string reported_option;
+              switch (reported_tier) {
+                case 0x02:
+                  id(gear_raw) = 0x40;
+                  reported_option = "50%";
+                  break;
+                case 0x03:
+                  id(gear_raw) = 0x60;
+                  reported_option = "75%";
+                  break;
+                default:
+                  id(gear_raw) = 0x00;
+                  reported_option = "Off";
+                  break;
+              }
+              if (id(gear_select).state != reported_option) {
+                id(gear_select).publish_state(reported_option);
+              }
+            }
+
             id(first_boot) = false;
             return;
           }

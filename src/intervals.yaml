@@ -8,8 +8,8 @@
         - lambda: |-
             // Decide whether a Follow-Me packet (INIT/UPDATE/STOP) needs to
             // go out this tick. The actual frame is built and sent by
-            // send_follow_me_button, so this scheduled path and any manual
-            // press (e.g. from the Gear button's underlying logic) share
+            // send_follow_me_button (which includes its own TX-collision
+            // guard), so this scheduled path and any manual press share
             // one code path.
             bool due = (id(uptime_sensor).state - id(last_follow_me_send_time) >= ${follow_me_interval}) && (id(op_bytes) != 0x00);
             id(follow_me_due) = due && (id(follow_me).state || id(follow_me_init));
@@ -21,6 +21,13 @@
               lambda: 'return !id(follow_me_due);'
             then:
               - uart.write: !lambda |-
+                  // See send_button for why this guard exists.
+                  uint32_t since_last_tx = millis() - id(last_tx_millis);
+                  if (since_last_tx < 150) {
+                    delay(150 - since_last_tx);
+                  }
+                  id(last_tx_millis) = millis();
+
                   static std::vector<uint8_t> queryData = {0xaa, 0xc0, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3F, 0x81, 0x55};
                   static std::vector<uint8_t> queryDataC4 = {0xAA, 0xC4, 0x00, 0x00, 0x00, 0x00, 0xA5, 0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3B, 0x02, 0x55};
 

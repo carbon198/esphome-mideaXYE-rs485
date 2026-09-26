@@ -16,7 +16,7 @@
         } else if (x == "75%") {
           id(gear_raw) = 0x60;
         }
-        id(gear_pending) = true;
+        id(c6_pending) = true;
     # Confirmed via a real KJR capture: selecting a nonzero GEAR level
     # clears Turbo. Only fires when actually turning GEAR ON (not when
     # selecting "Off"), since we have no evidence GEAR-off affects Turbo.

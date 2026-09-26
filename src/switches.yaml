@@ -39,9 +39,7 @@
         then:
           - lambda: |-
               id(turbo_active) = true;
-              id(turbo_pending) = true;
-          # Confirmed via real KJR captures: Turbo is mutually exclusive
-          # with BOTH Sleep and GEAR - turning Turbo on clears both.
+              id(c6_pending) = true;
           - switch.turn_off: sleep_mode_switch
           - select.set:
               id: gear_select
@@ -52,4 +50,4 @@
           return;
         }
         id(turbo_active) = false;
-        id(turbo_pending) = true;
+        id(c6_pending) = true;

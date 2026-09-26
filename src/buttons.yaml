@@ -31,3 +31,145 @@
         sendData[14] = 0xFF - (crc&0xFF);
         ESP_LOGI("custom","calculated CRC is %x",crc);
         return sendData;
+
+- platform: template
+  name: "Send Follow-Me Update"
+  id: "send_follow_me_button"
+  internal: true
+  on_press:
+    - uart.write: !lambda |-
+        enum PacketType {
+          INIT,
+          UPDATE,
+          STOP
+        };
+        static std::vector<uint8_t> followMeData = {0xaa, 0xc6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x39, 0x00, 0x55};
+
+        PacketType packet = INIT;
+        double followMeTemp = id(follow_me_temp).state;
+
+        if (id(follow_me).state) {
+          if (id(follow_me_init)) {
+            // if we are initialized, send the update packet
+            followMeData[10] = id(use_fahrenheit) ? 0x42 : 0x2;
+            packet = UPDATE;
+          } else {
+            // send the initialization packet
+            followMeData[10] = id(use_fahrenheit) ? 0x46 : 0x6;
+            id(follow_me_init) = true;
+            packet = INIT;
+          }
+        } else {
+          // turn off follow me and instruct unit to go back to its internal temperature sensor
+          followMeData[10] = id(use_fahrenheit) ? 0x44 : 0x4;
+          id(follow_me_init) = false;
+          packet = STOP;
+        }
+
+        if (id(smart_rounding)) {
+          // true if compressor is on or has been off for less than 2m. this is to account for the compressor cycling during defrost
+          bool compressor_on = (id(uptime_sensor).state - id(last_compressor_off_time) < 120 && id(uptime_sensor).state > 120) || id(compressor_status).state;
+          uint8_t set_point = id(use_fahrenheit) ? ((id(set_temp) - 32.0) * (5.0 / 9.0)) : id(set_temp);
+
+          switch (id(op_bytes)) {
+            case 0x84: // heat
+              if (fabs(set_point - followMeTemp) > 0.5) {
+                followMeData[11] = static_cast<uint8_t>(std::round(followMeTemp));
+                break;
+              }
+              if (compressor_on) {
+                followMeData[11] = static_cast<uint8_t>(std::round(followMeTemp));
+              } else {
+                followMeData[11] = static_cast<uint8_t>(std::ceil(followMeTemp));
+              }
+              break;
+            case 0x88: // cool
+              if (fabs(set_point - followMeTemp) > 0.5) {
+                followMeData[11] = static_cast<uint8_t>(std::round(followMeTemp));
+                break;
+              }
+              if (compressor_on) {
+                followMeData[11] = static_cast<uint8_t>(std::round(followMeTemp));
+              } else {
+                followMeData[11] = static_cast<uint8_t>(std::floor(followMeTemp));
+              }
+              break;
+            default:
+              followMeData[11] = static_cast<uint8_t>(std::round(followMeTemp));
+              break;
+          }
+        } else {
+          followMeData[11] = static_cast<uint8_t>(std::round(followMeTemp));
+        }
+
+        switch (packet) {
+          case INIT:
+            ESP_LOGI("follow_me", "Sending follow me initialization packet with temp of %iC", followMeData[11]);
+            break;
+          case UPDATE:
+            ESP_LOGI("follow_me", "Sending follow me update packet with temp of %iC", followMeData[11]);
+            break;
+          case STOP:
+            ESP_LOGI("follow_me", "Sending follow me stop packet--the T1 temp should revert to its internal sensor now");
+            break;
+        }
+
+        // compute CRC
+        uint8_t i = 0;
+        uint32_t crc = 0;
+        int len = 16;
+        for (i = 0; i < len; i++) {
+          if (i != 14) {
+            crc += followMeData[i];
+          }
+        }
+        followMeData[14] = 0xFF - (crc & 0xFF);
+
+        // update last sent time
+        id(last_follow_me_send_time) = static_cast<uint32_t>(id(uptime_sensor).state);
+
+        // implement timeout feature to prevent a stale value from keeping the unit stuck on or off
+        if (id(uptime_sensor).state - id(last_follow_me_update) > ${follow_me_timeout}) {
+          id(follow_me).turn_off();
+        }
+
+        return followMeData;
+
+- platform: template
+  name: "Send Gear Command"
+  id: "send_gear_button"
+  on_press:
+    - uart.write: !lambda |-
+        static std::vector<uint8_t> gearData = {0xaa, 0xc6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x39, 0x00, 0x55};
+
+        // GEAR shares the C6 command's subcommand slot with Follow-Me
+        // INIT/UPDATE/STOP. A real capture proved "GEAR off" and
+        // "Follow-Me STOP" are byte-for-byte identical, so there's no way
+        // to send a GEAR value distinct from STOP while Follow-Me is
+        // inactive - we just use the STOP/aux-parameter subcommand
+        // (0x04/0x44) in that case, matching real hardware. While
+        // Follow-Me IS active, send this as an ordinary UPDATE
+        // (0x02/0x42) with the gear value in byte 8 instead of the room
+        // temp there, so the unit doesn't mistake it for a real STOP and
+        // drop Follow-Me tracking.
+        if (id(follow_me).state) {
+          gearData[10] = id(use_fahrenheit) ? 0x42 : 0x02;
+        } else {
+          gearData[10] = id(use_fahrenheit) ? 0x44 : 0x04;
+        }
+
+        gearData[8] = id(gear_raw);
+        gearData[11] = static_cast<uint8_t>(std::round(id(follow_me_temp).state));
+
+        ESP_LOGI("follow_me", "Sending GEAR command: raw=0x%02X (follow_me %s)", id(gear_raw), id(follow_me).state ? "active" : "inactive");
+
+        uint8_t i = 0;
+        uint32_t crc = 0;
+        int len = 16;
+        for (i = 0; i < len; i++) {
+          if (i != 14) {
+            crc += gearData[i];
+          }
+        }
+        gearData[14] = 0xFF - (crc & 0xFF);
+        return gearData;

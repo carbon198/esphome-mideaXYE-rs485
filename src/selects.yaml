@@ -16,10 +16,8 @@
         } else if (x == "75%") {
           id(gear_raw) = 0x60;
         }
-        // Block the C4 gear-tier parser from touching gear_raw/this select
-        // until send_gear_button has actually transmitted this choice -
-        // otherwise a response already in flight from before this change
-        // (still reporting the OLD tier) could arrive and visually revert
-        // the selection before our own command goes out.
+        // Don't send here - the 1.5s interval loop picks this up as a
+        // reason to press send_c6_button on its next tick (see
+        // intervals.yaml), keeping ALL C6 sends scheduled through one
+        // place instead of two different trigger paths.
         id(gear_pending) = true;
-    - button.press: send_c6_button

@@ -112,9 +112,11 @@
         // Turbo is layered onto the Follow-Me subcommand as an
         // independent flag bit (0x08), confirmed via a real KJR capture
         // showing byte10=0x4E = 0x40 (base) | 0x06 (INIT) | 0x08 (TURBO).
-        // Only ever observed composed with INIT so far - untested with
-        // UPDATE/STOP, so this is a testing probe to see how a REAL air
-        // handler responds, not a confirmed-correct implementation yet.
+        // Confirmed working end-to-end against a real air handler: C4
+        // byte 15 persists the Turbo bit across polls (same as GEAR),
+        // composes correctly with a nonzero GEAR tier (byte15=0x0A for
+        // GEAR 50%+Turbo), and produced a real, repeatable blower current
+        // draw spike when toggled.
         if (id(turbo_active)) {
           c6Data[10] |= 0x08;
         }
@@ -182,14 +184,10 @@
           id(follow_me).turn_off();
         }
 
-        // We've now transmitted the current GEAR value and/or Follow-Me
-        // mode-capability transition - safe to trust incoming C4 tier
+        // We've now transmitted the current Follow-Me state, GEAR tier,
+        // and Turbo flag together - safe to trust incoming C4 tier
         // reports again, and no need to force another immediate send.
         id(follow_me_mode_change_pending) = false;
-
-        // We've now transmitted the current GEAR value and Turbo state -
-        // safe to trust incoming C4 tier reports again, and no need to
-        // force another immediate send.
         id(c6_pending) = false;
 
         return c6Data;

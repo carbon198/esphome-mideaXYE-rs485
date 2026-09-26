@@ -16,8 +16,12 @@
         } else if (x == "75%") {
           id(gear_raw) = 0x60;
         }
-        // Don't send here - the 1.5s interval loop picks this up as a
-        // reason to press send_c6_button on its next tick (see
-        // intervals.yaml), keeping ALL C6 sends scheduled through one
-        // place instead of two different trigger paths.
         id(gear_pending) = true;
+    # Confirmed via a real KJR capture: selecting a nonzero GEAR level
+    # clears Turbo. Only fires when actually turning GEAR ON (not when
+    # selecting "Off"), since we have no evidence GEAR-off affects Turbo.
+    - if:
+        condition:
+          lambda: 'return x != "Off";'
+        then:
+          - switch.turn_off: turbo_mode_switch

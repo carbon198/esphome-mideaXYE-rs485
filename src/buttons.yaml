@@ -185,8 +185,11 @@
         // We've now transmitted the current GEAR value and/or Follow-Me
         // mode-capability transition - safe to trust incoming C4 tier
         // reports again, and no need to force another immediate send.
-        id(gear_pending) = false;
         id(follow_me_mode_change_pending) = false;
-        id(turbo_pending) = false;
+
+        // We've now transmitted the current GEAR value and Turbo state -
+        // safe to trust incoming C4 tier reports again, and no need to
+        // force another immediate send.
+        id(c6_pending) = false;
 
         return c6Data;

@@ -31,10 +31,6 @@
   entity_category: diagnostic
 
 - platform: template
-  id: eco_mode
-  name: "Eco Mode"
-
-- platform: template
   id: turbo_mode
   name: "Turbo Mode"
 

@@ -236,10 +236,11 @@ debug:
             // detected even if another protect bit happens to be set simultaneously
             id(defrost_status).publish_state((bytes[24] & 0x02) != 0);
 
-            // Mode flags (byte 20): ECO, AUX_HEAT (turbo), SWING, VENTILATION
-            id(eco_mode).publish_state((bytes[20] & 0x01) != 0);
+            // Mode flags (byte 20): SLEEP (confirmed via real KJR test),
+            // AUX_HEAT (turbo), SWING, VENTILATION
             id(turbo_mode).publish_state((bytes[20] & 0x02) != 0);
             id(swing_mode).publish_state((bytes[20] & 0x04) != 0);
+            id(sleep_mode_switch).publish_state((bytes[20] & 0x01) != 0);
             
             // CCM communication error flags (byte 26). Separate from the C4
             // subsystem faults - this is bus/comm health, not unit health.

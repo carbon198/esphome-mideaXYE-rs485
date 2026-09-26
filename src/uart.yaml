@@ -12,25 +12,20 @@ debug:
     bytes: 32
   sequence:
     - lambda: |-
-        static std::vector<uint8_t> checkData = {0xaa, 0xc0, 0x80, 0x00, 0x00, 0x00};
         static const char *const TAG = "uart_debug";
-        static uint8_t separator = ' ';
-        std::string res;
-        if (direction == UART_DIRECTION_RX) {
-          res += "<<< ";
-        } else {
-          res += ">>> ";
-        }
-        size_t len = bytes.size();
-        char buf[5];
-        for (size_t i = 0; i < len; i++) {
-          if (i > 0) {
-            res += separator;
-          }
-          sprintf(buf, "%02X", bytes[i]);
-          res += buf;
-        }
+
+        // 1) Log the raw frame (skip the string-building work entirely if
+        // logging is disabled).
         if (id(log_rs485_comms)) {
+          std::string res = direction == UART_DIRECTION_RX ? "<<< " : ">>> ";
+          char buf[3];
+          for (size_t i = 0; i < bytes.size(); i++) {
+            if (i > 0) {
+              res += ' ';
+            }
+            sprintf(buf, "%02X", bytes[i]);
+            res += buf;
+          }
           ESP_LOGI(TAG, "%s", res.c_str());
         }
         delay(10);
@@ -38,238 +33,268 @@ debug:
         if (direction == UART_DIRECTION_TX) {
           return;
         }
-        
-        if (id(command_sent)) {
-          // turn off command_sent flag so we know we can resume queries
-          id(command_sent)=false;
-        } else if (id(new_input)){
-          // do nothing if there is new input so we don't overwrite whatever the user did
-        } else {
-          // C4 queries are for setpoints (in F only) and T4 temps
-          if (bytes[1] == 0xC4) 
-          {
-            id(t4_temp).publish_state((bytes[21] - 0x28) / 2.0);
-            if (id(use_fahrenheit))
-            {
-              if (bytes[18] > 0x87 && bytes[18] < 215) {
-                id(set_temp) = bytes[18] - 0x87;
-              }
+
+        // 2) Validate frame size and preamble. A short/misaligned chunk can
+        // happen after a bus collision - bail out before indexing further
+        // to avoid reading garbage or going out of bounds.
+        bool frame_ok = true;
+        if (bytes.size() != 32) {
+          ESP_LOGE(TAG, "Dropping frame: expected 32 bytes, got %zu", bytes.size());
+          frame_ok = false;
+        } else if (bytes[0] != 0xAA) {
+          ESP_LOGE(TAG, "Invalid frame: expected preamble 0xAA, got 0x%02X", bytes[0]);
+          frame_ok = false;
+        }
+
+        // 3) Validate CRC (sum of all bytes except index 30, crc = 0xFF -
+        // (sum & 0xFF)) - only meaningful once we know the frame is a full
+        // 32 bytes.
+        if (frame_ok) {
+          uint32_t sum = 0;
+          for (size_t idx = 0; idx < bytes.size(); idx++) {
+            if (idx != 30) {
+              sum += bytes[idx];
             }
+          }
+          uint8_t expected_crc = 0xFF - (sum & 0xFF);
+          if (bytes[30] != expected_crc) {
+            ESP_LOGE(TAG, "CRC mismatch: got 0x%02X, expected 0x%02X", bytes[30], expected_crc);
+            frame_ok = false;
+          }
+        }
 
-            // system_status_flags (abs byte 16, C4). Confirmed NOT static - changed
-            // between off (0x84) and fan-only (0x81) captures, unlike the
-            // compressor/protection/freq fields which are frozen. Bit 0x80 =
-            // documented "enabled", bit 0x04 = documented "wired controller present".
-            // The bit that flips between these two states (0x04 off vs 0x01 fan-only)
-            // is undocumented - publishing raw for now to build a bitmap across more
-            // operating states (heat, cool, each fan speed) before assigning meaning.
-            id(system_status_flags_raw).publish_state(bytes[16]);
+        // 4) new_input gating
+        if (id(new_input)) {
+          // Do nothing if there is new input so we don't overwrite whatever
+          // the user did.
+        } else if (!frame_ok) {
+          // Already logged above why this frame was rejected - nothing
+          // more to do with it.
+        } else {
+          // 5) Dispatch on the command byte.
+          switch (bytes[1]) {
+            case 0xC3:
+            case 0xC0: {
+              // Confirmed via a real capture: a C3 response is
+              // byte-for-byte identical in layout to a C0 response - it's
+              // just echoing current status, same as any other poll. So we
+              // parse both the same way, and only additionally clear
+              // command_sent when this happened to be the C3 echo of our
+              // own just-sent SET command.
+              if (bytes[1] == 0xC3) {
+                id(command_sent) = false;
+              }
 
-            // Subsystem OK/fault flags. 0x80 = OK, anything else = a
-            // protection is tripped for that subsystem. Not yet
-            // contradicted by data (compressor being off doesn't imply a
-            // subsystem fault), but still unconfirmed against a real fault.
-            id(compressor_fault).publish_state((bytes[26] & 0x80) == 0);
-            id(outdoor_fan_fault).publish_state((bytes[27] & 0x80) == 0);
-            id(reversing_valve_fault).publish_state((bytes[28] & 0x80) == 0);
-            id(inverter_fault).publish_state((bytes[29] & 0x80) == 0);
+              if (id(compressor_status).state && !(bytes[19] & 0x01)) {
+                id(last_compressor_off_time) = static_cast<uint32_t>(id(uptime_sensor).state);
+              }
 
-            // GEAR tier acknowledgment (byte15). Confirmed via testing:
-            // only 0x00 (Off), 0x02 (50%), 0x03 (75%) are reachable tiers
-            // - any other requested raw value silently rounds down to the
-            // nearest valid tier below it, and tier 0x01 is never seen.
-            // Skip updating gear_raw/the select while gear_pending is
-            // true, so a stale in-flight response from before the user's
-            // latest change doesn't visually revert their selection
-            // before our own command has actually gone out.
-            if (!id(gear_pending)) {
-              uint8_t reported_tier = bytes[15];
-              switch (reported_tier) {
-                case 0x02:
-                  id(gear_raw) = 0x40;
-                  id(gear_select).publish_state("50%");
+              id(fan_bytes) = bytes[9];
+              id(op_bytes) = bytes[8];
+              id(timer_start_bytes) = bytes[17];
+              id(timer_stop_bytes) = bytes[18];
+              id(unit_mode_flags_bytes) = bytes[20];
+
+              // we only capture the celcius set point here, since it always comes back celcius no matter what mode the unit is in
+              if (!id(use_fahrenheit)) {
+                id(set_temp) = bytes[10] & 0xBF;
+              }
+
+              if (!id(first_boot)) {
+                float set_point_c;
+                if (id(use_fahrenheit)) {
+                  set_point_c = (id(set_temp) - 32) * 5.0 / 9.0;
+                } else {
+                  set_point_c = id(set_temp);
+                }
+
+                // heating set point update on climate entity
+                if (id(op_bytes) == 0x84) {
+                  if (set_point_c != id(climate_entity).target_temperature_low) {
+                    id(climate_entity).make_call().set_target_temperature_low(set_point_c).perform();
+                  }
+                }
+
+                // cooling set point update on climate entity
+                if (id(op_bytes) == 0x88) {
+                  if (set_point_c != id(climate_entity).target_temperature_high) {
+                    id(climate_entity).make_call().set_target_temperature_high(set_point_c).perform();
+                  }
+                }
+              }
+
+              switch (id(op_bytes)) {
+                case 0x00:
+                  if (id(climate_entity).mode != CLIMATE_MODE_OFF) {
+                    id(climate_entity).make_call().set_mode(CLIMATE_MODE_OFF).perform();
+                  }
                   break;
-                case 0x03:
-                  id(gear_raw) = 0x60;
-                  id(gear_select).publish_state("75%");
+                case 0x91:
+                case 0x98:
+                case 0x10:
+                case 0x94:
+                  break;
+                case 0x88:
+                  if (id(climate_entity).mode != CLIMATE_MODE_HEAT_COOL && id(climate_entity).mode != CLIMATE_MODE_COOL) {
+                    id(climate_entity).make_call().set_mode(CLIMATE_MODE_COOL).perform();
+                  }
+                  break;
+                case 0x82:
+                  if (id(climate_entity).mode != CLIMATE_MODE_DRY) {
+                    id(climate_entity).make_call().set_mode(CLIMATE_MODE_DRY).perform();
+                  }
+                  break;
+                case 0x84:
+                  if (id(climate_entity).mode != CLIMATE_MODE_HEAT_COOL && id(climate_entity).mode != CLIMATE_MODE_HEAT) {
+                    id(climate_entity).make_call().set_mode(CLIMATE_MODE_HEAT).perform();
+                  }
+                  break;
+                case 0x81:
+                  if (id(climate_entity).mode != CLIMATE_MODE_FAN_ONLY) {
+                    id(climate_entity).make_call().set_mode(CLIMATE_MODE_FAN_ONLY).perform();
+                  }
                   break;
                 default:
-                  id(gear_raw) = 0x00;
-                  id(gear_select).publish_state("Off");
                   break;
               }
-            }
 
-            id(first_boot) = false;
-            return;
-          }
-          
-          // C6 is the follow me update. we don't do anything with the responses
-          if (bytes[1] == 0xC6) {
-            return;
-          }
-
-          // what follows is the standard C0 query which captures most of the sensor data
-          bool theyMatch = true;
-          uint8_t i;
-          for (i=0;i<6;++i)
-          {
-            if (i != 1) {
-              if (bytes[i]!=checkData[i])
-              {
-                theyMatch = false;
+              switch (id(fan_bytes)) {
+                case 0x80:
+                  if (id(climate_entity).fan_mode != CLIMATE_FAN_AUTO) {
+                    id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_AUTO).perform();
+                  }
+                  break;
+                case 0x01:
+                  if (id(climate_entity).fan_mode != CLIMATE_FAN_HIGH) {
+                    id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_HIGH).perform();
+                  }
+                  break;
+                case 0x02:
+                  if (id(climate_entity).fan_mode != CLIMATE_FAN_MEDIUM) {
+                    id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_MEDIUM).perform();
+                  }
+                  break;
+                case 0x04:
+                  if (id(climate_entity).fan_mode != CLIMATE_FAN_LOW) {
+                    id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_LOW).perform();
+                  }
+                  break;
+                default:
+                  break;
               }
-            }
-          }
-          if (theyMatch)
-          {
-            if (id(compressor_status).state && !(bytes[19] & 0x01)) {
-              id(last_compressor_off_time) = static_cast<uint32_t>(id(uptime_sensor).state);
+
+              // these sensors are offset by 0x28 and in units of 0.5C regardless of what mode the unit is in
+              id(t1_temp).publish_state((bytes[11] - 0x28) / 2.0);
+              id(t2a_temp).publish_state((bytes[12] - 0x28) / 2.0);
+              id(t2b_temp).publish_state((bytes[13] - 0x28) / 2.0);
+              id(t3_temp).publish_state((bytes[14] - 0x28) / 2.0);
+
+              // compressor status and defrost binary sensors. Defrost code may be different on other units, await user feedback
+              // byte 19 can apparently indicate outdoor fan and compressor on some units, hence the bitwise comparison for compressor only
+              id(compressor_status).publish_state(bytes[19] & 0x01);
+              // bitwise check on protect_flags bit 1, not equality, so defrost is still
+              // detected even if another protect bit happens to be set simultaneously
+              id(defrost_status).publish_state((bytes[24] & 0x02) != 0);
+
+              // Mode flags (byte 20): SLEEP (confirmed via real KJR test),
+              // AUX_HEAT (turbo), SWING, VENTILATION
+              id(turbo_mode).publish_state((bytes[20] & 0x02) != 0);
+              id(swing_mode).publish_state((bytes[20] & 0x04) != 0);
+              id(sleep_mode_switch).publish_state((bytes[20] & 0x01) != 0);
+
+              // CCM communication error flags (byte 26). Separate from the C4
+              // subsystem faults - this is bus/comm health, not unit health.
+              id(ccm_comm_error).publish_state(bytes[26] != 0x00);
+
+              // Error/protect flags per PROTOCOL.md: byte 22/23 = error_flags low/high,
+              // byte 24/25 = protect_flags low/high. Each set bit N => "E{N}" / "P{N}".
+              uint16_t error_flags = (static_cast<uint16_t>(bytes[23]) << 8) | bytes[22];
+              uint16_t protect_flags = (static_cast<uint16_t>(bytes[25]) << 8) | bytes[24];
+              uint16_t protect_flags_no_defrost = protect_flags & ~0x0002;
+
+              std::string fault_codes;
+              for (int bit = 0; bit < 16; bit++) {
+                if (error_flags & (1 << bit)) {
+                  if (!fault_codes.empty()) fault_codes += " ";
+                  fault_codes += "E" + std::to_string(bit);
+                }
+              }
+              for (int bit = 0; bit < 16; bit++) {
+                if (protect_flags_no_defrost & (1 << bit)) {
+                  if (!fault_codes.empty()) fault_codes += " ";
+                  fault_codes += "P" + std::to_string(bit);
+                }
+              }
+              if (fault_codes.empty()) fault_codes = "OK";
+
+              id(error_codes).publish_state(fault_codes);
+              break;
             }
 
-            id(fan_bytes) = bytes[9];
-            id(op_bytes) = bytes[8];
-            id(timer_start_bytes) = bytes[17];
-            id(timer_stop_bytes) = bytes[18];
-            id(unit_mode_flags_bytes) = bytes[20];
-
-            // we only capture the celcius set point here, since it always comes back celcius no matter what mode the unit is in
-            if (!id(use_fahrenheit)) {
-              id(set_temp) = bytes[10] & 0xBF;
-            }
-
-            if (!id(first_boot)) {
-              float set_point_c;
+            case 0xC4: {
+              // C4 queries are for setpoints (in F only) and T4 temps.
+              id(t4_temp).publish_state((bytes[21] - 0x28) / 2.0);
               if (id(use_fahrenheit)) {
-                set_point_c = (id(set_temp) - 32) * 5.0 / 9.0;
-              } else {
-                set_point_c = id(set_temp);
-              }
-
-              // heating set point update on climate entity
-              if (id(op_bytes) == 0x84) {
-                if (set_point_c != id(climate_entity).target_temperature_low) {
-                  id(climate_entity).make_call().set_target_temperature_low(set_point_c).perform();
+                if (bytes[18] > 0x87 && bytes[18] < 215) {
+                  id(set_temp) = bytes[18] - 0x87;
                 }
               }
 
-              // cooling set point update on climate entity
-              if (id(op_bytes) == 0x88) {
-                if (set_point_c != id(climate_entity).target_temperature_high) {
-                  id(climate_entity).make_call().set_target_temperature_high(set_point_c).perform();
+              // system_status_flags (abs byte 16, C4). Confirmed NOT static - changed
+              // between off (0x84) and fan-only (0x81) captures, unlike the
+              // compressor/protection/freq fields which are frozen. Bit 0x80 =
+              // documented "enabled", bit 0x04 = documented "wired controller present".
+              // The bit that flips between these two states (0x04 off vs 0x01 fan-only)
+              // is undocumented - publishing raw for now to build a bitmap across more
+              // operating states (heat, cool, each fan speed) before assigning meaning.
+              id(system_status_flags_raw).publish_state(bytes[16]);
+
+              // Subsystem OK/fault flags. 0x80 = OK, anything else = a
+              // protection is tripped for that subsystem. Not yet
+              // contradicted by data (compressor being off doesn't imply a
+              // subsystem fault), but still unconfirmed against a real fault.
+              id(compressor_fault).publish_state((bytes[26] & 0x80) == 0);
+              id(outdoor_fan_fault).publish_state((bytes[27] & 0x80) == 0);
+              id(reversing_valve_fault).publish_state((bytes[28] & 0x80) == 0);
+              id(inverter_fault).publish_state((bytes[29] & 0x80) == 0);
+
+              // GEAR tier acknowledgment (byte15). Confirmed via testing:
+              // only 0x00 (Off), 0x02 (50%), 0x03 (75%) are reachable tiers
+              // - any other requested raw value silently rounds down to the
+              // nearest valid tier below it, and tier 0x01 is never seen.
+              // Skip updating gear_raw/the select while gear_pending is
+              // true, so a stale in-flight response from before the user's
+              // latest change doesn't visually revert their selection
+              // before our own command has actually gone out.
+              if (!id(gear_pending)) {
+                uint8_t reported_tier = bytes[15];
+                switch (reported_tier) {
+                  case 0x02:
+                    id(gear_raw) = 0x40;
+                    id(gear_select).publish_state("50%");
+                    break;
+                  case 0x03:
+                    id(gear_raw) = 0x60;
+                    id(gear_select).publish_state("75%");
+                    break;
+                  default:
+                    id(gear_raw) = 0x00;
+                    id(gear_select).publish_state("Off");
+                    break;
                 }
               }
+
+              id(first_boot) = false;
+              break;
             }
 
-            switch (id(op_bytes))
-            {
-              case 0x00:
-                if (id(climate_entity).mode != CLIMATE_MODE_OFF) {
-                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_OFF).perform();
-                }
-                break;
-              case 0x91:
-              case 0x98:
-              case 0x10:
-              case 0x94:
-                break;
-              case 0x88:
-                if (id(climate_entity).mode != CLIMATE_MODE_HEAT_COOL && id(climate_entity).mode != CLIMATE_MODE_COOL) {
-                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_COOL).perform();
-                }
-                break;
-              case 0x82:
-                if (id(climate_entity).mode != CLIMATE_MODE_DRY) {
-                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_DRY).perform();
-                }
-                break;
-              case 0x84:
-                if (id(climate_entity).mode != CLIMATE_MODE_HEAT_COOL && id(climate_entity).mode != CLIMATE_MODE_HEAT) {
-                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_HEAT).perform();
-                }
-                break;
-              case 0x81:
-                if (id(climate_entity).mode != CLIMATE_MODE_FAN_ONLY) {
-                  id(climate_entity).make_call().set_mode(CLIMATE_MODE_FAN_ONLY).perform();
-                }
-                break;
-              default:
-                break;
+            case 0xC6: {
+              // Follow-Me update - we don't do anything with these responses.
+              break;
             }
 
-            switch (id(fan_bytes))
-            {
-              case 0x80:
-                if (id(climate_entity).fan_mode != CLIMATE_FAN_AUTO) {
-                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_AUTO).perform();
-                }
-                break;
-              case 0x01:
-                if (id(climate_entity).fan_mode != CLIMATE_FAN_HIGH) {
-                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_HIGH).perform();
-                }
-                break;
-              case 0x02:
-                if (id(climate_entity).fan_mode != CLIMATE_FAN_MEDIUM) {
-                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_MEDIUM).perform();
-                }
-                break;
-              case 0x04:
-                if (id(climate_entity).fan_mode != CLIMATE_FAN_LOW) {
-                  id(climate_entity).make_call().set_fan_mode(CLIMATE_FAN_LOW).perform();
-                }
-                break;
-              default:
-                break;
-            }
-
-            // these sensors are offset by 0x28 and in units of 0.5C regardless of what mode the unit is in
-            id(t1_temp).publish_state((bytes[11] - 0x28) / 2.0);
-            id(t2a_temp).publish_state((bytes[12] - 0x28) / 2.0);
-            id(t2b_temp).publish_state((bytes[13] - 0x28) / 2.0);
-            id(t3_temp).publish_state((bytes[14] - 0x28) / 2.0);
-            
-            // compressor status and defrost binary sensors. Defrost code may be different on other units, await user feedback
-            // byte 19 can apparently indicate outdoor fan and compressor on some units, hence the bitwise comparison for compressor only
-            id(compressor_status).publish_state(bytes[19] & 0x01);
-            // bitwise check on protect_flags bit 1, not equality, so defrost is still
-            // detected even if another protect bit happens to be set simultaneously
-            id(defrost_status).publish_state((bytes[24] & 0x02) != 0);
-
-            // Mode flags (byte 20): SLEEP (confirmed via real KJR test),
-            // AUX_HEAT (turbo), SWING, VENTILATION
-            id(turbo_mode).publish_state((bytes[20] & 0x02) != 0);
-            id(swing_mode).publish_state((bytes[20] & 0x04) != 0);
-            id(sleep_mode_switch).publish_state((bytes[20] & 0x01) != 0);
-            
-            // CCM communication error flags (byte 26). Separate from the C4
-            // subsystem faults - this is bus/comm health, not unit health.
-            id(ccm_comm_error).publish_state(bytes[26] != 0x00);
-            
-            // Error/protect flags per PROTOCOL.md: byte 22/23 = error_flags low/high,
-            // byte 24/25 = protect_flags low/high. Each set bit N => "E{N}" / "P{N}".
-            uint16_t error_flags = (static_cast<uint16_t>(bytes[23]) << 8) | bytes[22];
-            uint16_t protect_flags = (static_cast<uint16_t>(bytes[25]) << 8) | bytes[24];
-            uint16_t protect_flags_no_defrost = protect_flags & ~0x0002;
-            
-            std::string fault_codes;
-            for (int bit = 0; bit < 16; bit++) {
-              if (error_flags & (1 << bit)) {
-                if (!fault_codes.empty()) fault_codes += " ";
-                fault_codes += "E" + std::to_string(bit);
-              }
-            }
-            for (int bit = 0; bit < 16; bit++) {
-              if (protect_flags_no_defrost & (1 << bit)) {
-                if (!fault_codes.empty()) fault_codes += " ";
-                fault_codes += "P" + std::to_string(bit);
-              }
-            }
-            if (fault_codes.empty()) fault_codes = "OK";
-            
-            id(error_codes).publish_state(fault_codes);
-          } else 
-          {
-            ESP_LOGI("custom","First 6 bytes of incoming data were bad, not using values");
+            default:
+              ESP_LOGE(TAG, "Unknown command byte in response: 0x%02X", bytes[1]);
+              break;
           }
         }

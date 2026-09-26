@@ -62,3 +62,6 @@
 - id: last_tx_millis
   type: uint32_t
   initial_value: "0"
+- id: gear_pending
+  type: bool
+  initial_value: 'false'

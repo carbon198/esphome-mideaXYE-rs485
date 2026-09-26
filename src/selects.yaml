@@ -1,0 +1,25 @@
+- platform: template
+  name: "Gear"
+  id: gear_select
+  optimistic: true
+  options:
+    - "Off"
+    - "50%"
+    - "75%"
+  initial_option: "Off"
+  set_action:
+    - lambda: |-
+        if (x == "Off") {
+          id(gear_raw) = 0x00;
+        } else if (x == "50%") {
+          id(gear_raw) = 0x40;
+        } else if (x == "75%") {
+          id(gear_raw) = 0x60;
+        }
+        // Block the C4 gear-tier parser from touching gear_raw/this select
+        // until send_gear_button has actually transmitted this choice -
+        // otherwise a response already in flight from before this change
+        // (still reporting the OLD tier) could arrive and visually revert
+        // the selection before our own command goes out.
+        id(gear_pending) = true;
+    - button.press: send_gear_button

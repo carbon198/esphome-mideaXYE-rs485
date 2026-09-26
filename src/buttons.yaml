@@ -109,6 +109,16 @@
           packet = STOP;
         }
 
+        // Turbo is layered onto the Follow-Me subcommand as an
+        // independent flag bit (0x08), confirmed via a real KJR capture
+        // showing byte10=0x4E = 0x40 (base) | 0x06 (INIT) | 0x08 (TURBO).
+        // Only ever observed composed with INIT so far - untested with
+        // UPDATE/STOP, so this is a testing probe to see how a REAL air
+        // handler responds, not a confirmed-correct implementation yet.
+        if (id(turbo_active)) {
+          c6Data[10] |= 0x08;
+        }
+
         if (id(smart_rounding)) {
           bool compressor_on = (id(uptime_sensor).state - id(last_compressor_off_time) < 120 && id(uptime_sensor).state > 120) || id(compressor_status).state;
           uint8_t set_point = id(use_fahrenheit) ? ((id(set_temp) - 32.0) * (5.0 / 9.0)) : id(set_temp);
@@ -177,5 +187,6 @@
         // reports again, and no need to force another immediate send.
         id(gear_pending) = false;
         id(follow_me_mode_change_pending) = false;
+        id(turbo_pending) = false;
 
         return c6Data;

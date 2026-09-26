@@ -31,8 +31,8 @@
   entity_category: diagnostic
 
 - platform: template
-  id: turbo_mode
-  name: "Turbo Mode"
+  id: turbo_mode_flags_bit_unconfirmed
+  name: "Mode Flags Bit 0x02 (Unconfirmed)"
 
 - platform: template
   id: swing_mode

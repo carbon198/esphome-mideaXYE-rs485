@@ -23,14 +23,14 @@
             // are three independent reasons to send one:
             //  1. A real Follow-Me update/init is due (normal interval
             //     elapsed, and Follow-Me is active or needs a STOP).
-            //  2. The user just changed the GEAR select (gear_pending) -
-            //     bypasses the elapsed-time check since GEAR works
+            //  2. The user just changed GEAR or Turbo (c6_pending) -
+            //     bypasses the elapsed-time check since both work
             //     independently of Follow-Me state.
             //  3. The operating mode just crossed the Follow-Me
             //     capability boundary (follow_me_mode_change_pending).
             // Either way, the actual frame is built by send_c6_button,
-            // which always carries the current Follow-Me state and GEAR
-            // tier together.
+            // which always carries the current Follow-Me state, GEAR
+            // tier, and Turbo flag together.
             bool unit_online = (id(op_bytes) != 0x00);
             bool follow_me_interval_elapsed = (id(uptime_sensor).state - id(last_follow_me_send_time) >= ${follow_me_interval});
             bool follow_me_reason = unit_online && follow_me_interval_elapsed && (id(follow_me).state || id(follow_me_init));

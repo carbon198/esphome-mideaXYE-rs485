@@ -80,7 +80,21 @@
         PacketType packet = INIT;
         double followMeTemp = id(follow_me_temp).state;
 
-        if (id(follow_me).state) {
+        // Some operating modes don't support Follow-Me tracking at all -
+        // a real KJR confirmed this by sending a Follow-Me STOP whenever
+        // switching to Fan-only or Dry, and a fresh INIT (not just an
+        // UPDATE) whenever switching back to Heat or Cool, even though
+        // the user's Follow-Me preference never changed. We mirror that
+        // by deriving "is Follow-Me actually wanted right now" from BOTH
+        // the switch AND the current mode's capability - this also means
+        // follow_me_init naturally gets reset to false by the STOP branch
+        // whenever we leave a capable mode, so re-entering one later
+        // automatically triggers a fresh INIT rather than resuming as an
+        // UPDATE, with no extra state tracking needed here.
+        bool mode_supports_follow_me = (id(op_bytes) == 0x84 || id(op_bytes) == 0x88);
+        bool want_follow_me = id(follow_me).state && mode_supports_follow_me;
+
+        if (want_follow_me) {
           if (id(follow_me_init)) {
             c6Data[10] = 0x42;
             packet = UPDATE;
@@ -158,8 +172,10 @@
           id(follow_me).turn_off();
         }
 
-        // We've now transmitted the current GEAR value - safe to trust
-        // incoming C4 tier reports again.
+        // We've now transmitted the current GEAR value and/or Follow-Me
+        // mode-capability transition - safe to trust incoming C4 tier
+        // reports again, and no need to force another immediate send.
         id(gear_pending) = false;
+        id(follow_me_mode_change_pending) = false;
 
         return c6Data;

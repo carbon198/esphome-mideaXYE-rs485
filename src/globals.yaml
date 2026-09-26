@@ -59,3 +59,6 @@
 - id: gear_raw
   type: uint8_t
   initial_value: "0"
+- id: last_tx_millis
+  type: uint32_t
+  initial_value: "0"

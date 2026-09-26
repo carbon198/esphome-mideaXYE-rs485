@@ -9,12 +9,17 @@
   id: sleep_mode_switch
   optimistic: true
   turn_on_action:
-    - lambda: |-
-        if (id(first_boot)) {
-          return;
-        }
-        id(unit_mode_flags_bytes) |= 0x01;
-        id(new_input) = true;
+    - if:
+        condition:
+          lambda: 'return !id(first_boot);'
+        then:
+          - lambda: |-
+              id(unit_mode_flags_bytes) |= 0x01;
+              id(new_input) = true;
+          # Confirmed via a real KJR capture: turning Sleep on sends an
+          # explicit Follow-Me/C6 frame with the Turbo bit cleared -
+          # Sleep and Turbo are mutually exclusive on this unit.
+          - switch.turn_off: turbo_mode_switch
   turn_off_action:
     - lambda: |-
         if (id(first_boot)) {
@@ -28,12 +33,19 @@
   id: turbo_mode_switch
   optimistic: true
   turn_on_action:
-    - lambda: |-
-        if (id(first_boot)) {
-          return;
-        }
-        id(turbo_active) = true;
-        id(turbo_pending) = true;
+    - if:
+        condition:
+          lambda: 'return !id(first_boot);'
+        then:
+          - lambda: |-
+              id(turbo_active) = true;
+              id(turbo_pending) = true;
+          # Confirmed via real KJR captures: Turbo is mutually exclusive
+          # with BOTH Sleep and GEAR - turning Turbo on clears both.
+          - switch.turn_off: sleep_mode_switch
+          - select.set:
+              id: gear_select
+              option: "Off"
   turn_off_action:
     - lambda: |-
         if (id(first_boot)) {

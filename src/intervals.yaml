@@ -6,24 +6,38 @@
         lambda: 'return id(first_boot) || (!id(command_sent) && !id(new_input));'
       then:
         - lambda: |-
+            // Detect crossing the Follow-Me capability boundary (see
+            // send_c6_button for why this matters) so we can force an
+            // immediate send instead of waiting out the normal interval.
+            bool current_capable_mode = (id(op_bytes) == 0x84 || id(op_bytes) == 0x88);
+            if (current_capable_mode != id(last_follow_me_capable_mode)) {
+              id(last_follow_me_capable_mode) = current_capable_mode;
+              if (id(follow_me).state) {
+                ESP_LOGI("follow_me", "Operating mode %s Follow-Me (op_bytes=0x%02X) - sending updated state immediately",
+                         current_capable_mode ? "now supports" : "no longer supports", id(op_bytes));
+                id(follow_me_mode_change_pending) = true;
+              }
+            }
+
             // Decide whether a C6 packet needs to go out this tick. There
-            // are two independent reasons to send one:
+            // are three independent reasons to send one:
             //  1. A real Follow-Me update/init is due (normal interval
             //     elapsed, and Follow-Me is active or needs a STOP).
             //  2. The user just changed the GEAR select (gear_pending) -
-            //     this bypasses the elapsed-time check entirely so GEAR
-            //     changes go out promptly, and doesn't require Follow-Me
-            //     to be active/initialized, since GEAR works independently
-            //     of Follow-Me state.
+            //     bypasses the elapsed-time check since GEAR works
+            //     independently of Follow-Me state.
+            //  3. The operating mode just crossed the Follow-Me
+            //     capability boundary (follow_me_mode_change_pending).
             // Either way, the actual frame is built by send_c6_button,
-            // which always carries both the current Follow-Me state and
-            // the current GEAR tier together.
+            // which always carries the current Follow-Me state and GEAR
+            // tier together.
             bool unit_online = (id(op_bytes) != 0x00);
             bool follow_me_interval_elapsed = (id(uptime_sensor).state - id(last_follow_me_send_time) >= ${follow_me_interval});
             bool follow_me_reason = unit_online && follow_me_interval_elapsed && (id(follow_me).state || id(follow_me_init));
             bool gear_reason = unit_online && id(gear_pending);
+            bool mode_change_reason = unit_online && id(follow_me_mode_change_pending);
 
-            id(follow_me_due) = follow_me_reason || gear_reason;
+            id(follow_me_due) = follow_me_reason || gear_reason || mode_change_reason;
             if (id(follow_me_due)) {
               id(send_c6_button).press();
             }

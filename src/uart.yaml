@@ -84,23 +84,19 @@ debug:
             // before our own command has actually gone out.
             if (!id(gear_pending)) {
               uint8_t reported_tier = bytes[15];
-              std::string reported_option;
               switch (reported_tier) {
                 case 0x02:
                   id(gear_raw) = 0x40;
-                  reported_option = "50%";
+                  id(gear_select).publish_state("50%");
                   break;
                 case 0x03:
                   id(gear_raw) = 0x60;
-                  reported_option = "75%";
+                  id(gear_select).publish_state("75%");
                   break;
                 default:
                   id(gear_raw) = 0x00;
-                  reported_option = "Off";
+                  id(gear_select).publish_state("Off");
                   break;
-              }
-              if (id(gear_select).state != reported_option) {
-                id(gear_select).publish_state(reported_option);
               }
             }
 

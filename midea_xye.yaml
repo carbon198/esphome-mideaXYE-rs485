@@ -24,4 +24,6 @@ switch: !include src/switches.yaml
 
 number: !include src/numbers.yaml
 
+select: !include src/selects.yaml
+
 climate: !include src/climate.yaml

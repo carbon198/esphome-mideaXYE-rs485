@@ -210,6 +210,10 @@ debug:
               // subsystem faults - this is bus/comm health, not unit health.
               id(ccm_comm_error).publish_state(bytes[26] != 0x00);
 
+              // Exploratory - meaning not yet known, publishing raw to help
+              // identify it by comparing values across operating states.
+              id(c0_byte28_raw).publish_state(bytes[28]);
+
               // Error/protect flags per PROTOCOL.md: byte 22/23 = error_flags low/high,
               // byte 24/25 = protect_flags low/high. Each set bit N => "E{N}" / "P{N}".
               uint16_t error_flags = (static_cast<uint16_t>(bytes[23]) << 8) | bytes[22];

@@ -71,3 +71,11 @@
   id: system_status_flags_raw
   entity_category: diagnostic
   state_class: measurement
+
+- platform: template
+  # Meaning unconfirmed - exploratory raw byte, published to help find
+  # what it means by comparing values across different operating states.
+  name: "C0 Byte 28 (Raw)"
+  id: c0_byte28_raw
+  entity_category: diagnostic
+  state_class: measurement

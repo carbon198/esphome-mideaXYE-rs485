@@ -257,6 +257,12 @@ debug:
               // operating states (heat, cool, each fan speed) before assigning meaning.
               id(system_status_flags_raw).publish_state(bytes[16]);
 
+              // Exploratory - documented as compressor frequency / fan RPM
+              // (high/low byte), but constant so far. Published raw to compare
+              // against C0 byte 28.
+              id(c4_byte19_raw).publish_state(bytes[19]);
+              id(c4_byte20_raw).publish_state(bytes[20]);
+
               // Subsystem OK/fault flags. 0x80 = OK, anything else = a
               // protection is tripped for that subsystem. Not yet
               // contradicted by data (compressor being off doesn't imply a

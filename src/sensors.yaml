@@ -79,3 +79,18 @@
   id: c0_byte28_raw
   entity_category: diagnostic
   state_class: measurement
+
+# Exploratory: documented as compressor frequency / fan RPM (high/low byte)
+# but has read a constant 0xBC 0xD6 in every C4 capture so far. Published raw
+# so it can be overlaid against C0 byte 28 to see whether they are related.
+- platform: template
+  name: "C4 Byte 19 (Raw)"
+  id: c4_byte19_raw
+  entity_category: diagnostic
+  state_class: measurement
+
+- platform: template
+  name: "C4 Byte 20 (Raw)"
+  id: c4_byte20_raw
+  entity_category: diagnostic
+  state_class: measurement

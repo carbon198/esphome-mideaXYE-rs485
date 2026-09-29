@@ -95,6 +95,8 @@
   # inverted: 0% = fully open, 100% = fully closed. Polarity not verified.
   name: "EEV Throttle"
   id: eev_throttle
+  icon: "mdi:valve"
+  entity_category: diagnostic
   unit_of_measurement: "%"
   accuracy_decimals: 1
   state_class: measurement

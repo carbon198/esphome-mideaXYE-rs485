@@ -212,11 +212,12 @@ debug:
 
               // Exploratory - bytes 28/29 look like a little-endian 16-bit
               // indoor EEV step position (0-480, 480 = 0x01E0 at idle).
-              // Published raw plus as a percentage assuming 480 = fully open.
+              // Published raw plus as a throttle percentage assuming 480 = fully
+              // open (0% = fully open, 100% = fully closed).
               id(c0_byte28_raw).publish_state(bytes[28]);
               id(c0_byte29_raw).publish_state(bytes[29]);
               uint16_t eev_steps = static_cast<uint16_t>(bytes[28]) | (static_cast<uint16_t>(bytes[29]) << 8);
-              id(indoor_eev_opening).publish_state(std::min(100.0f, eev_steps * 100.0f / 480.0f));
+              id(eev_throttle).publish_state(std::max(0.0f, 100.0f - eev_steps * 100.0f / 480.0f));
 
               // Error/protect flags per PROTOCOL.md: byte 22/23 = error_flags low/high,
               // byte 24/25 = protect_flags low/high. Each set bit N => "E{N}" / "P{N}".

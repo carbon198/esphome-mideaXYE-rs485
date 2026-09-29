@@ -91,9 +91,10 @@
 - platform: template
   # Hypothesis (unconfirmed): C0 bytes 28-29 are the indoor EEV step position,
   # little-endian, 0-480 steps. Assumes 480 = fully open (it sits at 480 in
-  # heating and idle, and drops below it while cooling); polarity not verified.
-  name: "Indoor EEV Opening"
-  id: indoor_eev_opening
+  # heating and idle, and drops below it while cooling), so this is shown
+  # inverted: 0% = fully open, 100% = fully closed. Polarity not verified.
+  name: "EEV Throttle"
+  id: eev_throttle
   unit_of_measurement: "%"
   accuracy_decimals: 1
   state_class: measurement

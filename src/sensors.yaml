@@ -80,6 +80,24 @@
   entity_category: diagnostic
   state_class: measurement
 
+- platform: template
+  # High byte of what appears to be a 16-bit little-endian value with byte 28
+  # (0x01E0 = 480 at idle). Unconfirmed.
+  name: "C0 Byte 29 (Raw)"
+  id: c0_byte29_raw
+  entity_category: diagnostic
+  state_class: measurement
+
+- platform: template
+  # Hypothesis (unconfirmed): C0 bytes 28-29 are the indoor EEV step position,
+  # little-endian, 0-480 steps. Assumes 480 = fully open (it sits at 480 in
+  # heating and idle, and drops below it while cooling); polarity not verified.
+  name: "Indoor EEV Opening"
+  id: indoor_eev_opening
+  unit_of_measurement: "%"
+  accuracy_decimals: 1
+  state_class: measurement
+
 # Exploratory: documented as compressor frequency / fan RPM (high/low byte)
 # but has read a constant 0xBC 0xD6 in every C4 capture so far. Published raw
 # so it can be overlaid against C0 byte 28 to see whether they are related.
